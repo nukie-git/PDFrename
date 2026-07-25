@@ -1,0 +1,76 @@
+@echo off
+setlocal enabledelayedexpansion
+
+:: Force working directory to the directory of this batch script
+cd /d "%~dp0"
+
+:: Set target directory to Downloads
+set "TARGET_DIR=C:\Users\nukie\Downloads"
+
+echo ===================================================
+echo   PDF Transaction Receipt Renaming Workflow Tool
+echo   Target Folder: %TARGET_DIR%
+echo ===================================================
+echo.
+
+:: Check Python installation
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python is not installed or not added to your PATH environment variable.
+    echo Please install Python from https://www.python.org/ and try again.
+    pause
+    exit /b 1
+)
+
+:: Check pypdf dependency
+python -c "import pypdf" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [INFO] Required Python package 'pypdf' is missing.
+    set /p install_choice="Would you like to install 'pypdf' now? (Y/N): "
+    if /i "!install_choice!"=="Y" (
+        echo Installing pypdf...
+        pip install pypdf
+        if !errorlevel! neq 0 (
+            echo [ERROR] Failed to install pypdf. Please run 'pip install pypdf' manually.
+            pause
+            exit /b 1
+        )
+        echo [SUCCESS] pypdf installed successfully.
+    ) else (
+        echo [WARNING] Missing required dependencies. Cannot run rename workflow.
+        pause
+        exit /b 1
+    )
+)
+
+:: Run renaming preview
+echo.
+set /p run_choice="Would you like to run the rename workflow preview (dry run) on Downloads? (Y/N): "
+if /i "!run_choice!"=="Y" (
+    echo.
+    echo Running dry run preview on: %TARGET_DIR%
+    echo ---------------------------------------------------
+    python dry_run_rename.py "%TARGET_DIR%"
+    if !errorlevel! equ 2 (
+        echo ---------------------------------------------------
+        goto end_process
+    )
+    echo ---------------------------------------------------
+    echo.
+    set /p execute_choice="Would you like to proceed with the actual renaming? (Y/N): "
+    if /i "!execute_choice!"=="Y" (
+        echo.
+        echo Executing renaming...
+        python execute_rename.py "%TARGET_DIR%"
+    ) else (
+        echo Renaming aborted by user.
+    )
+) else (
+    echo Workflow aborted.
+)
+
+:end_process
+
+echo.
+echo Process complete.
+pause
