@@ -15,7 +15,7 @@ If the user triggers this workflow (e.g. by typing `"start"`):
 1. **Do NOT run execute_rename.py first**.
 2. **Execute a Dry Run / Preview**:
    - Run [dry_run_rename.py](file:///C:/Users/nukie/apps/rename/dry_run_rename.py) to get the preview mapping.
-   - The script will automatically filter out any PDFs that do not contain `"Transaction Status Single Transfer to Other Bank"` or `"Transaction Status Single Transfer to Mandiri"`.
+   - The script will automatically filter out any PDFs that do not contain `"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"`.
    - Output the preview table directly in the chat message window so that the user can visually see the comparison between **Original Filename** and **Proposed New Filename**.
 3. **Wait for Explicit Approval**:
    - Use the `ask_question` tool to prompt the user with interactive buttons.

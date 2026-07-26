@@ -30,7 +30,7 @@ Example output: `20260721 Dede Madin pembelian salak bale.pdf`
 > **CRITICAL RULE**: Do **NOT** rename any files without explicit user approval. Always present the preview table first and wait for user confirmation.
 
 1. **Scan PDF Files**: Find all `.pdf` files inside the project folder (`C:\Users\nukie\apps\rename`).
-2. **Filter & Parse Document Data**: Verify that each PDF contains either `"Transaction Status Single Transfer to Other Bank"` or `"Transaction Status Single Transfer to Mandiri"`. If it doesn't, skip the file. Otherwise, extract `Creation Date`, `Destination Account`, and `Remark` using `pypdf`.
+2. **Filter & Parse Document Data**: Verify that each PDF contains single transfer indicators (`"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"`, case-insensitive). If it doesn't, skip the file. Otherwise, extract `Creation Date`, `Destination Account`, and `Remark` using `pypdf`.
 3. **Generate Visual Dry Run / Preview**:
    Output a clear markdown preview table showing original vs proposed new filenames side-by-side directly in the chat message response.
 4. **Prompt User for Action**:

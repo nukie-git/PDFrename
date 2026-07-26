@@ -19,14 +19,14 @@ def get_rename_mapping(directory='.'):
             text = '\n'.join([page.extract_text() for page in reader.pages])
             
             # Skip if the document is not a valid transaction receipt of the expected types
-            if "Transaction Status Single Transfer to Other Bank" not in text and "Transaction Status Single Transfer to Mandiri" not in text:
+            if not re.search(r'Single Transfer [Tt]o (Other Bank|Mandiri)', text, re.IGNORECASE):
                 continue
             
             # Extract Creation Date
             # Format 1: MMM DD, YYYY (e.g. Jul 21, 2026)
-            date_match1 = re.search(r'Creation Date\s+([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})', text)
-            # Format 2: DD MMM YYYY (e.g. 23 Jul 2026)
-            date_match2 = re.search(r'Creation Date\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})', text)
+            date_match1 = re.search(r'Creation Date\s+([A-Za-z]{3})\s+(\d{1,2}),?\s+(\d{4})', text)
+            # Format 2: DD MMM YYYY (e.g. 26 Jul 2026)
+            date_match2 = re.search(r'Creation Date\s+(\d{1,2})\s+([A-Za-z]{3}),?\s+(\d{4})', text)
             
             if date_match1:
                 month_str, day_str, year_str = date_match1.groups()
