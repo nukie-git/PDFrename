@@ -11,7 +11,9 @@ def normalize_name(name):
 def get_rename_mapping(directory='.'):
     directory = os.path.expandvars(os.path.expanduser(directory))
     pdf_files = glob.glob(os.path.join(directory, '*.pdf'))
-    mapping = []
+
+    raw_items = []
+    error_items = []
 
     for f in sorted(pdf_files):
         filename = os.path.basename(f)
@@ -53,33 +55,83 @@ def get_rename_mapping(directory='.'):
             safe_receiver = re.sub(r'[\\/*?:"<>|]', '', receiver)
             safe_remark = re.sub(r'[\\/*?:"<>|]', '', remark)
             
-            new_filename = f"{date_formatted} {safe_receiver} {safe_remark}.pdf"
-            mapping.append({
+            raw_items.append({
                 'original': filename,
-                'new': new_filename,
                 'full_original': f,
-                'full_new': os.path.join(directory, new_filename),
                 'date': date_formatted,
                 'receiver': receiver,
-                'remark': remark
+                'remark': remark,
+                'safe_receiver': safe_receiver,
+                'safe_remark': safe_remark
             })
         except Exception as e:
-            mapping.append({
+            error_items.append({
                 'original': filename,
                 'error': str(e)
             })
-            
+
+    # Collision resolution
+    try:
+        existing_on_disk = {f.lower() for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))}
+    except Exception:
+        existing_on_disk = set()
+
+    originals_in_batch = {item['original'].lower() for item in raw_items}
+    external_existing = existing_on_disk - originals_in_batch
+
+    used_names = set(external_existing)
+    mapping = []
+
+    for item in raw_items:
+        base_stem = f"{item['date']} {item['safe_receiver']} {item['safe_remark']}"
+        base_filename = f"{base_stem}.pdf"
+
+        if base_filename.lower() in used_names:
+            counter = 1
+            while True:
+                candidate_filename = f"{base_stem} ({counter}).pdf"
+                if candidate_filename.lower() not in used_names:
+                    break
+                counter += 1
+            new_filename = candidate_filename
+            is_conflict = True
+        else:
+            new_filename = base_filename
+            is_conflict = False
+
+        used_names.add(new_filename.lower())
+
+        mapping.append({
+            'original': item['original'],
+            'new': new_filename,
+            'full_original': item['full_original'],
+            'full_new': os.path.join(directory, new_filename),
+            'date': item['date'],
+            'receiver': item['receiver'],
+            'remark': item['remark'],
+            'conflict': is_conflict
+        })
+
+    mapping.extend(error_items)
     return mapping
 
 def print_markdown_preview(mapping):
+    has_conflicts = any(item.get('conflict', False) for item in mapping)
+
     print("\n### Rename Preview Table\n")
+    if has_conflicts:
+        print("> [!WARNING]")
+        print("> **FILENAME CONFLICTS DETECTED**: One or more proposed filenames collided with existing files or duplicate receipts.")
+        print("> Suffixes like `(1)`, `(2)`, `(3)` have been automatically appended to resolve collisions.\n")
+
     print("| Original Filename | Proposed New Filename | Receiver (Normalized) | Remark |")
     print("| :--- | :--- | :--- | :--- |")
     for item in mapping:
         if 'error' in item:
             print(f"| `{item['original']}` | Error: {item['error']} | - | - |")
         else:
-            print(f"| `{item['original']}` | `{item['new']}` | {item['receiver']} | {item['remark']} |")
+            conflict_flag = " *(conflict resolved)*" if item.get('conflict') else ""
+            print(f"| `{item['original']}` | `{item['new']}`{conflict_flag} | {item['receiver']} | {item['remark']} |")
     print()
 
 if __name__ == '__main__':
@@ -90,3 +142,6 @@ if __name__ == '__main__':
         print("No eligible PDF files to rename exist in target folder.")
         sys.exit(2)
     print_markdown_preview(mapping)
+    has_conflicts = any(item.get('conflict', False) for item in mapping)
+    if has_conflicts:
+        sys.exit(3)

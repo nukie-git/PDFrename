@@ -32,9 +32,9 @@ Example output: `20260721 Dede Madin pembelian salak bale.pdf`
 1. **Scan PDF Files**: Find all `.pdf` files inside the target folder (e.g. `%USERPROFILE%\Downloads` or current workspace directory).
 2. **Filter & Parse Document Data**: Verify that each PDF contains single transfer indicators (`"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"`, case-insensitive). If it doesn't, skip the file. Otherwise, extract `Creation Date`, `Destination Account`, and `Remark` using `pypdf`.
 3. **Generate Visual Dry Run / Preview**:
-   Output a clear markdown preview table showing original vs proposed new filenames side-by-side directly in the chat message response.
+   Output a clear markdown preview table showing original vs proposed new filenames side-by-side. If proposed filenames conflict with existing files or duplicate receipts, automatically append numbered suffixes like `(1)`, `(2)`, `(3)` to resolve collisions and display a warning.
 4. **Prompt User for Action**:
-   - Use the `ask_question` tool to present the user with interactive buttons (`Yes, proceed with renaming` / `No, cancel`) to capture their approval.
+   - Use the `ask_question` tool to present the user with interactive buttons (`Yes, proceed with renaming` / `No, cancel`) to capture their approval. If conflicts were detected, explicitly prompt the user regarding collision resolution.
 5. **Execute Renaming**:
    - Upon user selection of the "Yes" option, rename the files. Note: On Windows, use a two-step temporary rename (`.tmp_rename`) to ensure case-only changes (like `DEDE MADIN` to `Dede Madin`) apply correctly.
 

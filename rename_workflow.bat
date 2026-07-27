@@ -43,30 +43,34 @@ if %errorlevel% neq 0 (
     )
 )
 
-:: Run renaming preview
+:: Run renaming preview directly
 echo.
-set /p run_choice="Would you like to run the rename workflow preview (dry run) on Downloads? (Y/N): "
-if /i "!run_choice!"=="Y" (
-    echo.
-    echo Running dry run preview on: %TARGET_DIR%
+:: set /p run_choice="Would you like to run the rename workflow preview (dry run) on Downloads? (Y/N): "
+echo Running dry run preview on: %TARGET_DIR%
+echo ---------------------------------------------------
+python dry_run_rename.py "%TARGET_DIR%"
+set "DRY_RUN_EXIT=!errorlevel!"
+
+if !DRY_RUN_EXIT! equ 2 (
     echo ---------------------------------------------------
-    python dry_run_rename.py "%TARGET_DIR%"
-    if !errorlevel! equ 2 (
-        echo ---------------------------------------------------
-        goto end_process
-    )
-    echo ---------------------------------------------------
-    echo.
-    set /p execute_choice="Would you like to proceed with the actual renaming? (Y/N): "
-    if /i "!execute_choice!"=="Y" (
-        echo.
-        echo Executing renaming...
-        python execute_rename.py "%TARGET_DIR%"
-    ) else (
-        echo Renaming aborted by user.
-    )
+    goto end_process
+)
+echo ---------------------------------------------------
+echo.
+
+if !DRY_RUN_EXIT! equ 3 (
+    echo [WARNING] Proposed filename conflicts were detected and disambiguated with (1), (2), etc.
+    set /p execute_choice="Filename conflicts exist. Would you still like to proceed with renaming? (Y/N): "
 ) else (
-    echo Workflow aborted.
+    set /p execute_choice="Would you like to proceed with the actual renaming? (Y/N): "
+)
+
+if /i "!execute_choice!"=="Y" (
+    echo.
+    echo Executing renaming...
+    python execute_rename.py "%TARGET_DIR%"
+) else (
+    echo Renaming aborted by user.
 )
 
 :end_process
