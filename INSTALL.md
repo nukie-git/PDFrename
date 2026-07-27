@@ -13,7 +13,7 @@ Ensure the files are placed as follows:
 ├── INSTALL.md
 ├── .gitignore             <-- Added (Python and project ignore file)
 ├── run_workflow.bat       <-- General Runner (Accepts target folder parameter)
-├── rename_workflow.bat    <-- Specific Runner (Hardcoded to C:\Users\nukie\Downloads)
+├── rename_workflow.bat    <-- Specific Runner (Defaults to %USERPROFILE%\Downloads)
 ├── dry_run_rename.py
 ├── execute_rename.py
 └── .agents/
@@ -25,8 +25,8 @@ Ensure the files are placed as follows:
 
 ## 2. Running via Windows Command Line (Easiest)
 - To rename files in the **current folder**, double-click `run_workflow.bat`.
-- To rename files in the **Downloads folder** (`C:\Users\nukie\Downloads`), double-click `rename_workflow.bat`.
-- Alternatively, run `run_workflow.bat "C:\any\path"` from the Command Prompt (`cmd.exe`).
+- To rename files in the **Downloads folder** (`%USERPROFILE%\Downloads`), double-click `rename_workflow.bat`.
+- Alternatively, run `run_workflow.bat "%USERPROFILE%\Downloads"` from the Command Prompt (`cmd.exe`).
 The batch file will automatically:
 1. Check if Python is installed on your system.
 2. Check if the required library `pypdf` is installed. If missing, it will ask to install it for you automatically.

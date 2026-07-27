@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 :: Set target directory to Downloads
-set "TARGET_DIR=C:\Users\nukie\Downloads"
+set "TARGET_DIR=%USERPROFILE%\Downloads"
 
 echo ===================================================
 echo   PDF Transaction Receipt Renaming Workflow Tool

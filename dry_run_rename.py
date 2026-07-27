@@ -9,6 +9,7 @@ def normalize_name(name):
     return name.title()
 
 def get_rename_mapping(directory='.'):
+    directory = os.path.expandvars(os.path.expanduser(directory))
     pdf_files = glob.glob(os.path.join(directory, '*.pdf'))
     mapping = []
 
