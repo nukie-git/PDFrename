@@ -1,4 +1,4 @@
-# PDFrename (v1.1.0)
+# PDFrename
 
 **PDFrename** is an automated transaction receipt renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs. It parses PDF transaction receipts, extracts metadata (Creation Date, Beneficiary, Remark), normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
