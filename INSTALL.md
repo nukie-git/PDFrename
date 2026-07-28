@@ -16,6 +16,8 @@ Ensure the files are placed as follows:
 ├── rename_workflow.bat    <-- Specific Runner (Defaults to %USERPROFILE%\Downloads)
 ├── dry_run_rename.py
 ├── execute_rename.py
+├── logger.py               <-- Daily rotating logger (keeps last 7 log files)
+├── logs/                  <-- Auto-created daily log folder (YYYYMMDD.log)
 └── .agents/
     └── rules/
         └── rename_workflow.md

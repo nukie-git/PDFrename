@@ -4,13 +4,18 @@ import glob
 from datetime import datetime
 from pypdf import PdfReader
 
+from logger import log
+
 def normalize_name(name):
     """Normalize receiver name to Title Case (e.g. 'DEDE MADIN' -> 'Dede Madin')."""
     return name.title()
 
 def get_rename_mapping(directory='.'):
     directory = os.path.expandvars(os.path.expanduser(directory))
+    log(f"Starting dry run scan on directory: {directory}", "INFO")
+
     pdf_files = glob.glob(os.path.join(directory, '*.pdf'))
+    log(f"Found {len(pdf_files)} PDF file(s) in target directory.", "INFO")
 
     raw_items = []
     error_items = []
@@ -65,6 +70,7 @@ def get_rename_mapping(directory='.'):
                 'safe_remark': safe_remark
             })
         except Exception as e:
+            log(f"Error reading PDF '{filename}': {e}", "ERROR")
             error_items.append({
                 'original': filename,
                 'error': str(e)
@@ -95,6 +101,7 @@ def get_rename_mapping(directory='.'):
                 counter += 1
             new_filename = candidate_filename
             is_conflict = True
+            log(f"Conflict detected for '{item['original']}'. Resolved to '{new_filename}'.", "WARNING")
         else:
             new_filename = base_filename
             is_conflict = False
@@ -113,6 +120,7 @@ def get_rename_mapping(directory='.'):
         })
 
     mapping.extend(error_items)
+    log(f"Dry run complete. Found {len(mapping)} eligible transaction receipt(s).", "INFO")
     return mapping
 
 def print_markdown_preview(mapping):

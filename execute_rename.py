@@ -1,21 +1,29 @@
 import os
 from dry_run_rename import get_rename_mapping
+from logger import log
 
 def rename_files(directory='.'):
+    directory = os.path.expandvars(os.path.expanduser(directory))
+    log(f"Starting execute rename on directory: {directory}", "INFO")
+
     mapping = get_rename_mapping(directory)
     renamed_count = 0
     
     print("--- EXECUTING RENAME ---")
     for item in mapping:
         if 'error' in item:
-            print(f"[SKIP] {item['original']}: {item['error']}")
+            msg = f"[SKIP] {item['original']}: {item['error']}"
+            print(msg)
+            log(msg, "ERROR")
             continue
             
         old_path = item['full_original']
         new_path = item['full_new']
         
         if item['original'] == item['new']:
-            print(f"[NO CHANGE] {item['original']}")
+            msg = f"[NO CHANGE] {item['original']}"
+            print(msg)
+            log(msg, "INFO")
             continue
             
         try:
@@ -23,12 +31,18 @@ def rename_files(directory='.'):
             temp_path = old_path + ".tmp_rename"
             os.rename(old_path, temp_path)
             os.rename(temp_path, new_path)
-            print(f"[RENAMED] {item['original']} -> {item['new']}")
+            msg = f"[RENAMED] {item['original']} -> {item['new']}"
+            print(msg)
+            log(msg, "SUCCESS")
             renamed_count += 1
         except Exception as e:
-            print(f"[ERROR] Could not rename {item['original']}: {e}")
+            msg = f"[ERROR] Could not rename {item['original']}: {e}"
+            print(msg)
+            log(msg, "ERROR")
             
-    print(f"\nSuccessfully renamed {renamed_count} files.")
+    summary_msg = f"Successfully renamed {renamed_count} files."
+    print(f"\n{summary_msg}")
+    log(summary_msg, "INFO")
 
 if __name__ == '__main__':
     import sys

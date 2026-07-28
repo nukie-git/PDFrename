@@ -59,7 +59,7 @@ echo ---------------------------------------------------
 echo.
 
 if !DRY_RUN_EXIT! equ 3 (
-    echo [WARNING] Proposed filename conflicts were detected and disambiguated with (1), (2), etc.
+    echo [WARNING] Proposed filename conflicts were detected and disambiguated with numbered suffixes.
     set /p execute_choice="Filename conflicts exist. Would you still like to proceed with renaming? (Y/N): "
 ) else (
     set /p execute_choice="Would you like to proceed with the actual renaming? (Y/N): "
