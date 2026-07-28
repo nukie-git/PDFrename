@@ -32,9 +32,10 @@ Ensure the files are placed as follows:
 The batch file will automatically:
 1. Check if Python is installed on your system.
 2. Check if the required library `pypdf` is installed. If missing, it will ask to install it for you automatically.
-3. Ask you if you want to run the **dry run preview**.
-4. Show the visual preview table of changes.
+3. Directly run the **dry run preview** scan on the target folder.
+4. Show the visual preview table of proposed changes (including collision warnings with `(1)`, `(2)` suffixes if any).
 5. Ask you if you want to proceed with the **actual renaming**.
+6. Write execution details into daily logs in `logs/YYYYMMDD.log` (keeping the last 7 log files).
 
 ---
 

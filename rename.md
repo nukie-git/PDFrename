@@ -42,8 +42,9 @@ Example output: `20260721 Dede Madin pembelian salak bale.pdf`
 
 ## 4. Helper Scripts Reference
 
-- [dry_run_rename.py](dry_run_rename.py): Parses all PDFs in the directory and outputs a preview table with Title Case normalization.
+- [dry_run_rename.py](dry_run_rename.py): Parses all PDFs in the directory and outputs a preview table with Title Case normalization and collision resolution.
 - [execute_rename.py](execute_rename.py): Performs the actual safe file renaming after user approval.
+- [logger.py](logger.py): Logs operation activities to `logs/YYYYMMDD.log` with a 7-day daily rotation policy.
 
 ---
 
