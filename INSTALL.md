@@ -1,6 +1,6 @@
-# Installation & How-To Guide
+# Installation & How-To Guide (v1.1.1)
 
-This guide explains how to install and run the PDF Transaction Receipt Renaming workflow in a clean Windows environment or Google Antigravity workspace.
+This guide explains how to install and run the PDF Transaction Receipt & Bon Renaming workflow in a clean Windows environment or Google Antigravity workspace.
 
 ---
 
@@ -11,11 +11,11 @@ Ensure the files are placed as follows:
 [Your Project Root Folder]/
 ├── rename.md
 ├── INSTALL.md
-├── .gitignore             <-- Added (Python and project ignore file)
+├── .gitignore             <-- Python and project ignore file
 ├── run_workflow.bat       <-- General Runner (Accepts target folder parameter)
 ├── rename_workflow.bat    <-- Specific Runner (Defaults to %USERPROFILE%\Downloads)
-├── dry_run_rename.py
-├── execute_rename.py
+├── dry_run_rename.py      <-- Dry run preview scanner & OCR parser
+├── execute_rename.py      <-- Fast rename executor (uses .rename_cache.json)
 ├── logger.py               <-- Daily rotating logger (keeps last 7 log files)
 ├── logs/                  <-- Auto-created daily log folder (YYYYMMDD.log)
 └── .agents/
@@ -31,11 +31,13 @@ Ensure the files are placed as follows:
 - Alternatively, run `run_workflow.bat "%USERPROFILE%\Downloads"` from the Command Prompt (`cmd.exe`).
 The batch file will automatically:
 1. Check if Python is installed on your system.
-2. Check if the required library `pypdf` is installed. If missing, it will ask to install it for you automatically.
-3. Directly run the **dry run preview** scan on the target folder.
-4. Show the visual preview table of proposed changes (including collision warnings with `(1)`, `(2)` suffixes if any).
-5. Ask you if you want to proceed with the **actual renaming**.
-6. Write execution details into daily logs in `logs/YYYYMMDD.log` (keeping the last 7 log files).
+2. Check if the required libraries (`pypdf`, `pillow`, `rapidocr-onnxruntime`) are installed. If missing, it will ask to install them for you automatically.
+3. Directly run the **dry run preview** scan on the target folder (performing OCR for scanned image PDFs if needed).
+4. Save pre-computed mappings to `.rename_cache.json` for fast execution.
+5. Show the visual preview table of proposed changes (including collision warnings with `(1)`, `(2)` suffixes if any).
+6. Ask you if you want to proceed with the **actual renaming**.
+7. Instantly rename files using `.rename_cache.json` and clean up the cache file.
+8. Write execution details into daily logs in `logs/YYYYMMDD.log` (keeping the last 7 log files).
 
 ---
 
@@ -46,3 +48,4 @@ The batch file will automatically:
    start
    ```
 3. The agent will run the dry run preview, present the visual comparison table directly in the chat, and prompt you (`yes`/`no`) before applying any renaming.
+
