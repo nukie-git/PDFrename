@@ -53,6 +53,13 @@ if !DRY_RUN_EXIT! equ 2 (
     echo ---------------------------------------------------
     goto end_process
 )
+
+if !DRY_RUN_EXIT! neq 0 if !DRY_RUN_EXIT! neq 3 (
+    echo ---------------------------------------------------
+    echo [ERROR] Dry run did not complete successfully ^(exit code !DRY_RUN_EXIT!^).
+    echo No valid preview was generated - aborting instead of prompting to rename.
+    goto end_process
+)
 echo ---------------------------------------------------
 echo(
 
@@ -72,7 +79,7 @@ if /i "!execute_choice!"=="Y" (
 )
 
 :end_process
-if exist "!TARGET_DIR!\.rename_cache.json" del /f /q "!TARGET_DIR!\.rename_cache.json" >nul 2>&1
+REM Pending mapping snapshot cleanup is owned by execute_rename.py, not this script.
 
 echo(
 echo Process complete.

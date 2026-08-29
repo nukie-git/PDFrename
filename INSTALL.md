@@ -1,4 +1,4 @@
-# Installation & How-To Guide (v1.2.0)
+# Installation & How-To Guide (v1.3.0)
 
 This guide explains how to install and run the PDF Transaction Receipt & Bon Renaming workflow in a clean Windows environment or Google Antigravity workspace.
 
@@ -15,9 +15,9 @@ Ensure the files are placed as follows:
 ├── run_workflow.bat       <-- General Runner (Accepts target folder parameter)
 ├── rename_workflow.bat    <-- Specific Runner (Defaults to %USERPROFILE%\Downloads)
 ├── dry_run_rename.py      <-- Dry run preview scanner & OCR parser
-├── execute_rename.py      <-- Fast rename executor (uses .rename_cache.json)
+├── execute_rename.py      <-- Rename executor (renames strictly from logs/pending_mapping.json)
 ├── logger.py               <-- Daily rotating logger (keeps last 7 log files)
-├── logs/                  <-- Auto-created daily log folder (YYYYMMDD.log)
+├── logs/                  <-- Auto-created folder for daily logs (YYYYMMDD.log) and pending_mapping.json
 └── .agents/
     └── rules/
         └── rename_workflow.md
@@ -33,11 +33,12 @@ The batch file will automatically:
 1. Check if Python is installed on your system.
 2. Check if the required libraries (`pypdf`, `pillow`, `rapidocr-onnxruntime`) are installed. If missing, it will ask to install them for you automatically.
 3. Directly run the **dry run preview** scan on the target folder (performing OCR for scanned image PDFs if needed).
-4. Save pre-computed mappings to `.rename_cache.json` for fast execution.
-5. Show the visual preview table of proposed changes (including collision warnings with `(1)`, `(2)` suffixes if any).
-6. Ask you if you want to proceed with the **actual renaming**.
-7. Instantly rename files using `.rename_cache.json` and clean up the cache file.
-8. Write execution details into daily logs in `logs/YYYYMMDD.log` (keeping the last 7 log files).
+4. Save the exact previewed mapping to `logs/pending_mapping.json`.
+5. Show the visual preview table of proposed changes — collision warnings with `(1)`, `(2)` suffixes if any, and `⚠️` warnings on any row that was a fallback guess rather than a confident read (check these before approving).
+6. If the dry run failed to complete (any exit code other than "no files found" or "conflicts found"), abort here instead of asking you to rename — nothing was safely previewed.
+7. Ask you if you want to proceed with the **actual renaming**.
+8. Rename files strictly from `logs/pending_mapping.json` — refusing instead of silently re-scanning if that snapshot is missing, for a different folder, or over an hour old — then delete the snapshot.
+9. Write execution details into daily logs in `logs/YYYYMMDD.log` (keeping the last 7 log files).
 
 ---
 
@@ -47,5 +48,6 @@ The batch file will automatically:
    ```
    start
    ```
-3. The agent will run the dry run preview, present the visual comparison table directly in the chat, and prompt you (`yes`/`no`) before applying any renaming.
+3. The agent will run the dry run preview, present the visual comparison table directly in the chat (flagging any `⚠️` low-confidence rows), and prompt you (`yes`/`no`) before applying any renaming.
+
 

@@ -1,26 +1,57 @@
 import os
-from dry_run_rename import get_rename_mapping
+import json
+from datetime import datetime, timedelta
+
+from dry_run_rename import get_pending_path
 from logger import log
+
+MAX_SNAPSHOT_AGE = timedelta(hours=1)
+
+
+def load_pending_mapping(directory):
+    """Load the exact mapping the user was shown in the last dry run, instead of
+    silently recomputing a fresh (possibly different) one. Refuses to proceed if no
+    snapshot exists, it's for a different directory, or it's stale."""
+    pending_path = get_pending_path()
+    if not os.path.exists(pending_path):
+        return None, "No dry-run preview found. Run the dry run first and approve its output."
+
+    try:
+        with open(pending_path, 'r', encoding='utf-8') as f:
+            payload = json.load(f)
+    except Exception as e:
+        return None, f"Could not read dry-run snapshot: {e}"
+
+    target_abs = os.path.abspath(os.path.expandvars(os.path.expanduser(directory)))
+    if payload.get('directory') != target_abs:
+        return None, (
+            f"Dry-run snapshot was for '{payload.get('directory')}', "
+            f"not '{target_abs}'. Re-run the dry run on this folder first."
+        )
+
+    try:
+        generated_at = datetime.fromisoformat(payload['generated_at'])
+    except Exception:
+        return None, "Dry-run snapshot is malformed. Re-run the dry run."
+
+    if datetime.now() - generated_at > MAX_SNAPSHOT_AGE:
+        return None, "Dry-run snapshot is stale (>1 hour old). Re-run the dry run for a fresh preview."
+
+    return payload['mapping'], None
+
 
 def rename_files(directory='.'):
     directory = os.path.expandvars(os.path.expanduser(directory))
     log(f"Starting execute rename on directory: {directory}", "INFO")
 
-    cache_path = os.path.join(directory, '.rename_cache.json')
-    mapping = None
-    if os.path.exists(cache_path):
-        try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
-                mapping = json.load(f)
-            log(f"Loaded pre-computed rename mapping from cache: {cache_path}", "INFO")
-        except Exception as e:
-            log(f"Could not read cache ({e}), falling back to rescanning directory.", "WARNING")
-
-    if mapping is None:
-        mapping = get_rename_mapping(directory)
+    mapping, err = load_pending_mapping(directory)
+    if err:
+        print(f"[ABORTED] {err}")
+        log(f"Execute aborted: {err}", "ERROR")
+        return
 
     renamed_count = 0
-    
+
     print("--- EXECUTING RENAME ---")
     try:
         for item in mapping:
@@ -29,40 +60,74 @@ def rename_files(directory='.'):
                 print(msg)
                 log(msg, "ERROR")
                 continue
-                
+
             old_path = item['full_original']
             new_path = item['full_new']
-            
+
             if item['original'] == item['new']:
                 msg = f"[NO CHANGE] {item['original']}"
                 print(msg)
                 log(msg, "INFO")
                 continue
-                
+
+            if not os.path.exists(old_path):
+                msg = f"[SKIP] {item['original']}: file no longer exists (moved/renamed since preview)"
+                print(msg)
+                log(msg, "ERROR")
+                continue
+
+            if os.path.exists(new_path):
+                msg = f"[SKIP] {item['original']}: target '{item['new']}' already exists (state changed since preview)"
+                print(msg)
+                log(msg, "ERROR")
+                continue
+
+            temp_path = old_path + ".tmp_rename"
             try:
                 # On Windows, renaming a file to a case-only change requires a 2-step rename
-                temp_path = old_path + ".tmp_rename"
                 os.rename(old_path, temp_path)
+            except Exception as e:
+                msg = f"[ERROR] Could not rename {item['original']}: {e}"
+                print(msg)
+                log(msg, "ERROR")
+                continue
+
+            try:
                 os.rename(temp_path, new_path)
                 msg = f"[RENAMED] {item['original']} -> {item['new']}"
                 print(msg)
                 log(msg, "SUCCESS")
                 renamed_count += 1
             except Exception as e:
-                msg = f"[ERROR] Could not rename {item['original']}: {e}"
+                # Second step failed - roll back to the original filename rather than
+                # leaving the file stuck as '<name>.pdf.tmp_rename' and invisible to
+                # future scans.
+                try:
+                    os.rename(temp_path, old_path)
+                    msg = f"[ERROR] Could not rename {item['original']} -> {item['new']}: {e}. Rolled back to original name."
+                except Exception as rollback_err:
+                    msg = (
+                        f"[CRITICAL] Could not rename {item['original']} -> {item['new']}: {e}. "
+                        f"Rollback also failed: {rollback_err}. "
+                        f"File may be stuck at '{os.path.basename(temp_path)}' - check manually."
+                    )
                 print(msg)
                 log(msg, "ERROR")
-                
+
         summary_msg = f"Successfully renamed {renamed_count} files."
         print(f"\n{summary_msg}")
         log(summary_msg, "INFO")
     finally:
-        if os.path.exists(cache_path):
+        # Single owner of pending-snapshot cleanup (see rename_workflow.bat / run_workflow.bat -
+        # they no longer delete it themselves).
+        pending_path = get_pending_path()
+        if os.path.exists(pending_path):
             try:
-                os.remove(cache_path)
-                log(f"Cleaned up cache file: {cache_path}", "INFO")
+                os.remove(pending_path)
+                log(f"Cleaned up pending mapping snapshot: {pending_path}", "INFO")
             except Exception as e:
-                log(f"Failed to remove cache file ({cache_path}): {e}", "WARNING")
+                log(f"Failed to remove pending mapping snapshot ({pending_path}): {e}", "WARNING")
+
 
 if __name__ == '__main__':
     import sys
