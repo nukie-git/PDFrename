@@ -13,36 +13,69 @@ try:
 except Exception:
     ocr_engine = None
 
+MONTH_MAP = {
+    'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
+    'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12,
+    'AGT': 8, 'AGO': 8
+}
+
 def extract_ocr_date_from_pdf(reader):
-    """Extract date from scanned PDF bon using OCR on page images."""
+    """Extract date from scanned PDF bon using multi-layer OCR parsing (LUNAS stamp date + handwritten date fallback)."""
     if not ocr_engine:
         return None
     try:
+        ocr_lines = []
         for page in reader.pages:
             for img in page.images:
                 res, _ = ocr_engine(img.data)
-                if not res:
-                    continue
-                for line in res:
-                    txt = line[1]
-                    if 'bandung' in txt.lower():
-                        sub = re.sub(r'Bandung,?\s*', '', txt, flags=re.IGNORECASE)
-                        sub = (sub.replace('4108', '04 08')
-                                  .replace('1081', '08')
-                                  .replace('108', '08')
-                                  .replace('0f1', '07')
-                                  .replace('0f', '07')
-                                  .replace('&', '8'))
-                        groups = re.findall(r'\d+', sub)
-                        if len(groups) >= 3:
-                            d, m, y = int(groups[0]), int(groups[1]), int(groups[2])
-                            if y < 100:
-                                y += 2000
-                            try:
-                                dt = datetime(y, m, d)
-                                return dt.strftime('%Y%m%d')
-                            except ValueError:
-                                pass
+                if res:
+                    ocr_lines.extend([l[1] for l in res])
+
+        if not ocr_lines:
+            return None
+
+        full_ocr_text = '\n'.join(ocr_lines)
+        
+        # 1. Clean spaces between digits in stamp (e.g. '1 3 AUG' -> '13 AUG')
+        cleaned = re.sub(r'(\d)\s+(\d)', r'\1\2', full_ocr_text)
+
+        # 2. Try LUNAS stamp date matching (e.g. '10 AUG 2026', '13 AUG 2026', '19 AUG 2026', '24 AUG 2026')
+        for match in re.finditer(r'(\d{1,2})\s*([A-Za-z]{3,9})\s*([Gg]?\d{4})?', cleaned, re.IGNORECASE):
+            day_str, month_str, year_str = match.groups()
+            m_upper = month_str.upper()[:3]
+            if m_upper in MONTH_MAP:
+                m = MONTH_MAP[m_upper]
+                d = int(day_str)
+                if 1 <= d <= 31:
+                    y = 2026
+                    if year_str:
+                        clean_y = re.sub(r'\D', '', year_str)
+                        if len(clean_y) == 4: y = int(clean_y)
+                        elif len(clean_y) == 2: y = int(clean_y) + 2000
+                    try:
+                        return datetime(y, m, d).strftime('%Y%m%d')
+                    except ValueError:
+                        pass
+
+        # 3. Try date pattern after 'Bandung,' or anywhere in text with handwriting OCR correction
+        cleaned_text = (cleaned.replace('l0', '10')
+                               .replace('I0', '10')
+                               .replace('4108', '04 08')
+                               .replace('24.101', '24 08 ')
+                               .replace('1081', '08')
+                               .replace('108', '08')
+                               .replace('0f1', '07')
+                               .replace('0f', '07')
+                               .replace('&', '8'))
+        
+        for m in re.finditer(r'(\d{1,2})\s*[\/\.-]\s*(\d{1,2})\s*[\/\.-]\s*(\d{2,4})', cleaned_text):
+            d, month, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if y < 100: y += 2000
+            if 1 <= d <= 31 and 1 <= month <= 12:
+                try:
+                    return datetime(y, month, d).strftime('%Y%m%d')
+                except ValueError:
+                    pass
     except Exception as e:
         log(f"OCR date extraction warning: {e}", "WARNING")
     return None
