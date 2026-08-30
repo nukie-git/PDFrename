@@ -260,9 +260,11 @@ def get_rename_mapping(directory='.'):
                         log(f"OCR engine unavailable for '{filename}' - rapidocr-onnxruntime not installed/loaded.", "WARNING")
 
                 date_warning = None
+                is_fallback = False
                 if not date_formatted:
                     date_formatted = img_match.group(1)
                     date_source = 'filename_fallback'
+                    is_fallback = True
                     if not ocr_engine:
                         date_warning = "OCR engine unavailable - using scan filename date, NOT the transaction date"
                     else:
@@ -280,7 +282,8 @@ def get_rename_mapping(directory='.'):
                     vendor_warning = "OCR engine unavailable - using default vendor name"
 
                 safe_vendor = sanitize_component(vendor_name)
-                base_stem = f"bon_{safe_vendor.lower().replace(' ', '_')}_{date_formatted}"
+                missed_suffix = "-missed" if is_fallback else ""
+                base_stem = f"bon_{safe_vendor.lower().replace(' ', '_')}_{date_formatted}{missed_suffix}"
                 if len(base_stem) > MAX_STEM_LEN:
                     base_stem = base_stem[:MAX_STEM_LEN].rstrip(' ._')
 

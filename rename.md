@@ -31,7 +31,7 @@ All fields are sanitized for invalid OS filename characters (`\ / : * ? " < > \|
 
 $$\text{bon\_\{vendor\}\_\{year\}\{month\}\{date\}}.pdf$$
 
-Example output: `bon_bentang_20260824.pdf`
+Example output: `bon_bentang_20260824.pdf` (or `bon_bentang_20260829-missed.pdf` when OCR date extraction is missed/fallback)
 
 | Field | Source | Extraction Order | Notes |
 | :--- | :--- | :--- | :--- |

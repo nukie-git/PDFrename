@@ -15,7 +15,7 @@
 - **Standardized Naming Convention**: Transfer receipts use:
   $$\text{\{YYYYMMDD\}} \quad \text{\{Receiver\}} \quad \text{\{Remark\}}.pdf$$
   *Example*: `20260728 Muhamad Fahmi Raihan Sul pembelian sayuran bale.pdf`
-  Scanned bons use `bon_{vendor}_{YYYYMMDD}.pdf`, e.g. `bon_bentang_20260824.pdf`.
+  Scanned bons use `bon_{vendor}_{YYYYMMDD}.pdf` (or `bon_{vendor}_{YYYYMMDD}-missed.pdf` if OCR date extraction fails and falls back to the scan date).
 - **Title Case Normalization**: Converts raw receiver names (e.g. `DEDE MADIN` $\rightarrow$ `Dede Madin`).
 - **Path Portability**: Supports `%USERPROFILE%\Downloads` and environment variable expansion across Windows environments.
 - **Automatic Collision Resolution**: Detects duplicate proposed filenames or existing files on disk and automatically appends disambiguated suffixes like `(1)`, `(2)`, `(3)`.
