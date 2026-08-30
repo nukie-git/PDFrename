@@ -1,4 +1,4 @@
-# Installation & How-To Guide (v1.3.0)
+# Installation & How-To Guide (v1.3.2)
 
 This guide explains how to install and run the PDF Transaction Receipt & Bon Renaming workflow in a clean Windows environment or Google Antigravity workspace.
 

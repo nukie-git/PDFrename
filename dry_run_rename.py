@@ -205,10 +205,16 @@ def extract_ocr_vendor(ocr_lines_sorted):
 
 def _normalize_vendor_name(raw):
     raw = re.sub(r'^(PT\.?|CV\.?|UD\.?)\s*', '', raw.strip(), flags=re.IGNORECASE)
-    raw = re.sub(r'\bSabilulungan\b', '', raw, flags=re.IGNORECASE)
+    for word in VENDOR_NAME_STRIP_WORDS:
+        raw = re.sub(re.escape(word), '', raw, flags=re.IGNORECASE)
     raw = re.sub(r'\s+', ' ', raw).strip()
     return raw.title()
 
+
+# Words dropped from the vendor name wherever it comes from (OCR or default) -
+# kept out of the rename template on request even though it's part of the
+# vendor's legal/printed name.
+VENDOR_NAME_STRIP_WORDS = {'SABILULUNGAN'}
 
 DEFAULT_BON_VENDOR = 'Bentang'
 
@@ -260,11 +266,9 @@ def get_rename_mapping(directory='.'):
                         log(f"OCR engine unavailable for '{filename}' - rapidocr-onnxruntime not installed/loaded.", "WARNING")
 
                 date_warning = None
-                is_fallback = False
                 if not date_formatted:
                     date_formatted = img_match.group(1)
                     date_source = 'filename_fallback'
-                    is_fallback = True
                     if not ocr_engine:
                         date_warning = "OCR engine unavailable - using scan filename date, NOT the transaction date"
                     else:
@@ -282,6 +286,7 @@ def get_rename_mapping(directory='.'):
                     vendor_warning = "OCR engine unavailable - using default vendor name"
 
                 safe_vendor = sanitize_component(vendor_name)
+                is_fallback = bool(date_warning or vendor_warning)
                 missed_suffix = "-missed" if is_fallback else ""
                 base_stem = f"bon_{safe_vendor.lower().replace(' ', '_')}_{date_formatted}{missed_suffix}"
                 if len(base_stem) > MAX_STEM_LEN:
@@ -446,6 +451,12 @@ def print_markdown_preview(mapping):
 
 if __name__ == '__main__':
     import sys
+    if hasattr(sys.stdout, 'reconfigure'):
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
     target_dir = sys.argv[1] if len(sys.argv) > 1 else '.'
     mapping = get_rename_mapping(target_dir)
     if not mapping:

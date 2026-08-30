@@ -1,4 +1,4 @@
-# PDFrename `v1.3.0`
+# PDFrename `v1.3.2`
 
 **PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs and image-based bon receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
@@ -68,6 +68,13 @@ The dry run's approved-mapping snapshot also lives in `logs/pending_mapping.json
 ---
 
 ## 📋 Changelog
+
+### `v1.3.2` (2026-08-30)
+- **Extensible Vendor Word Stripping**: Added `VENDOR_NAME_STRIP_WORDS = {'SABILULUNGAN'}` to drop non-essential vendor brand words from output filenames uniformly across OCR and default fallbacks.
+- **Combined Low-Confidence Suffix (`-missed`)**: Triggered `-missed` filename suffix whenever either date OCR or vendor OCR produces a fallback warning.
+
+### `v1.3.1` (2026-08-29)
+- **`-missed` Filename Suffix**: Appended `-missed` to low-confidence fallback bon filenames so unconfirmed scans remain visually flagged after terminal session ends.
 
 ### `v1.3.0` (2026-08-29)
 - **Preview-locked execution**: `execute_rename.py` now renames from the dry run's saved snapshot (`logs/pending_mapping.json`) instead of independently re-scanning the folder — closes a gap where the approved preview and the actual rename could silently diverge. Fixed a missing `import json` that had made the previous caching mechanism a no-op.
