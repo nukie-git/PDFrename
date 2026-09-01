@@ -1,4 +1,4 @@
-# PDFrename `v1.3.2`
+# PDFrename `v1.3.3`
 
 **PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs and image-based bon receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
@@ -68,6 +68,9 @@ The dry run's approved-mapping snapshot also lives in `logs/pending_mapping.json
 ---
 
 ## 📋 Changelog
+
+### `v1.3.3` (2026-09-01)
+- **Expanded Date Regex for Mandiri Receipts**: Added support for 4-letter month abbreviations (e.g. `Sept` in `Creation Date 01 Sept 2026`) and added fallback to `Instruction Date` field.
 
 ### `v1.3.2` (2026-08-30)
 - **Extensible Vendor Word Stripping**: Added `VENDOR_NAME_STRIP_WORDS = {'SABILULUNGAN'}` to drop non-essential vendor brand words from output filenames uniformly across OCR and default fallbacks.

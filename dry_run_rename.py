@@ -311,17 +311,19 @@ def get_rename_mapping(directory='.'):
 
             mandiri_warnings = []
 
-            # Extract Creation Date
-            date_match1 = re.search(r'Creation Date\s+([A-Za-z]{3})\s+(\d{1,2}),?\s+(\d{4})', text)
-            date_match2 = re.search(r'Creation Date\s+(\d{1,2})\s+([A-Za-z]{3}),?\s+(\d{4})', text)
+            # Extract Creation Date or Instruction Date
+            date_match1 = re.search(r'(?:Creation|Instruction) Date\s+([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', text)
+            date_match2 = re.search(r'(?:Creation|Instruction) Date\s+(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})', text)
 
             if date_match1:
                 month_str, day_str, year_str = date_match1.groups()
-                dt = datetime.strptime(f'{month_str} {day_str} {year_str}', '%b %d %Y')
+                m_str = month_str[:3].title()
+                dt = datetime.strptime(f'{m_str} {day_str.zfill(2)} {year_str}', '%b %d %Y')
                 date_formatted = dt.strftime('%Y%m%d')
             elif date_match2:
                 day_str, month_str, year_str = date_match2.groups()
-                dt = datetime.strptime(f'{day_str} {month_str} {year_str}', '%d %b %Y')
+                m_str = month_str[:3].title()
+                dt = datetime.strptime(f'{day_str.zfill(2)} {m_str} {year_str}', '%d %b %Y')
                 date_formatted = dt.strftime('%Y%m%d')
             else:
                 date_formatted = 'UNKNOWN_DATE'
