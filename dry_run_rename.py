@@ -306,14 +306,14 @@ def get_rename_mapping(directory='.'):
                 continue
 
             # Skip if the document is not a valid transaction receipt of the expected types
-            if not re.search(r'Single Transfer [Tt]o (Other Bank|Mandiri)', text, re.IGNORECASE):
+            if not re.search(r'(Single Transfer [Tt]o (Other Bank|Mandiri)|Multiple Transfer [Bb]y (Manual Input|File Upload)|Multiple Transfer)', text, re.IGNORECASE):
                 continue
 
             mandiri_warnings = []
 
-            # Extract Creation Date or Instruction Date
-            date_match1 = re.search(r'(?:Creation|Instruction) Date\s+([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', text)
-            date_match2 = re.search(r'(?:Creation|Instruction) Date\s+(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})', text)
+            # Extract Creation Date, Execution Date, or Instruction Date
+            date_match1 = re.search(r'(?:Creation|Execution|Instruction) Date\s+([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})', text)
+            date_match2 = re.search(r'(?:Creation|Execution|Instruction) Date\s+(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})', text)
 
             if date_match1:
                 month_str, day_str, year_str = date_match1.groups()
@@ -327,22 +327,22 @@ def get_rename_mapping(directory='.'):
                 date_formatted = dt.strftime('%Y%m%d')
             else:
                 date_formatted = 'UNKNOWN_DATE'
-                mandiri_warnings.append("Could not find/parse 'Creation Date' field - date left as UNKNOWN_DATE")
+                mandiri_warnings.append("Could not find/parse date field - date left as UNKNOWN_DATE")
 
-            dest_match = re.search(r'Destination Account\s+\d+\s+([^\r\n]+)', text)
+            dest_match = re.search(r'(?:Destination Account|Credit Account Number)\s+\d+(?:\s+[A-Za-z]{3})?\s+([^\r\n]+)', text)
             if dest_match:
                 raw_receiver = dest_match.group(1).strip()
+                raw_receiver = re.sub(r'^[A-Z]{3}\s+', '', raw_receiver)
             else:
                 raw_receiver = 'UNKNOWN_RECEIVER'
-                mandiri_warnings.append("Could not find 'Destination Account' field - receiver left as UNKNOWN_RECEIVER")
+                mandiri_warnings.append("Could not find account field - receiver left as UNKNOWN_RECEIVER")
             receiver = normalize_name(raw_receiver)
 
             remark_match = re.search(r'Remark\s+([^\r\n]+)', text)
             if remark_match:
                 remark = remark_match.group(1).strip()
             else:
-                remark = 'UNKNOWN_REMARK'
-                mandiri_warnings.append("Could not find 'Remark' field - remark left as UNKNOWN_REMARK")
+                remark = 'Transfer'
 
             safe_receiver = sanitize_component(receiver)
             safe_remark = sanitize_component(remark)

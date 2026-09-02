@@ -1,4 +1,4 @@
-# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.3.3)
+# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.4.0)
 
 This document defines the standard operating procedure for parsing and renaming PDF transaction receipts and scanned bon receipts within this project directory. Any AI assistant or conversation should read and follow this guide when triggered.
 
