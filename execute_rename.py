@@ -1,3 +1,13 @@
+"""execute_rename.py (PDFrename v1.4.0)
+
+Safe file renamer executing strictly from the preview-locked snapshot (logs/pending_mapping.json)
+generated during the last dry run.
+
+Enforces directory verification, maximum snapshot age validation (1 hour), Windows 2-step
+case-only temporary renaming (.tmp_rename), automatic rollback on partial rename failure,
+and single-owner snapshot cleanup upon completion.
+"""
+
 import os
 import json
 from datetime import datetime, timedelta

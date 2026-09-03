@@ -24,3 +24,13 @@ If the user triggers this workflow (e.g. by typing `"start"`):
    - Provide the options: `["Yes, proceed with renaming", "No, cancel"]`.
 4. **Execute Renaming**:
    - Only run [execute_rename.py](execute_rename.py) if the user selects the `"Yes, proceed with renaming"` option.
+
+---
+
+## Mandatory Documentation & Versioning Policy
+
+> [!IMPORTANT]
+> **ALWAYS UPDATE DOCUMENTATION**: Whenever any script, regex pattern, template, or workflow logic is created or updated:
+> 1. **Inline Code Documentation**: Update module docstrings, function docstrings, and inline comments in Python scripts (`dry_run_rename.py`, `execute_rename.py`, `logger.py`).
+> 2. **Project Documentation**: Update `README.md`, `rename.md`, and `INSTALL.md` with the new version number, changelog details, and updated technical specifications.
+> 3. **Workflow Archive**: Re-pack `pdf_rename_workflow.zip` so it always contains the latest scripts and documentation.

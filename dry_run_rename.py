@@ -1,3 +1,14 @@
+"""dry_run_rename.py (PDFrename v1.4.0)
+
+Automated dry run scanner and preview generator for Bank Mandiri (KOPRA) transfer proofs
+(Single Transfer & Multiple Transfer) and image-based scanned bon receipts (IMG_YYYYMMDD_*).
+
+Scans target directory, extracts metadata via pypdf and RapidOCR, resolves filename collisions,
+formats filenames, flags low-confidence fallback reads (with -missed suffix and warning flags),
+renders a visual Markdown preview table, and saves a preview-locked snapshot mapping to
+logs/pending_mapping.json for execute_rename.py.
+"""
+
 import os
 import re
 import glob
