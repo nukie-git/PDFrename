@@ -14,7 +14,7 @@ If the user triggers this workflow (e.g. by typing `"start"`):
 
 1. **Do NOT run execute_rename.py first**.
 2. **Execute a Dry Run / Preview**:
-   - Run [dry_run_rename.py](dry_run_rename.py) to get the preview mapping.
+   - Run [dry_run_rename.py](dry_run_rename.py) (using `python dry_run_rename.py` or `uv run dry_run_rename.py`) to get the preview mapping.
    - The script will automatically filter out any PDFs that do not contain `"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"` (except scanned bons matching `IMG_YYYYMMDD_*.pdf`, which are handled separately via OCR).
    - Output the preview table directly in the chat message window so that the user can visually see the comparison between **Original Filename** and **Proposed New Filename**.
    - If any row is marked `⚠️`, call it out explicitly to the user before asking for approval — it means that field was a fallback guess (OCR unavailable, no date found, unclear vendor), not a confirmed read.
@@ -30,7 +30,7 @@ If the user triggers this workflow (e.g. by typing `"start"`):
 ## Mandatory Documentation & Versioning Policy
 
 > [!IMPORTANT]
-> **ALWAYS UPDATE DOCUMENTATION**: Whenever any script, regex pattern, template, or workflow logic is created or updated:
-> 1. **Inline Code Documentation**: Update module docstrings, function docstrings, and inline comments in Python scripts (`dry_run_rename.py`, `execute_rename.py`, `logger.py`).
-> 2. **Project Documentation**: Update `README.md`, `rename.md`, and `INSTALL.md` with the new version number, changelog details, and updated technical specifications.
-> 3. **Workflow Archive**: Re-pack `pdf_rename_workflow.zip` so it always contains the latest scripts and documentation.
+> **ALWAYS ADD & UPDATE DOCUMENTATION**: Whenever any script, regex pattern, template, runner, or workflow logic is created or significantly modified:
+> 1. **Inline Code Documentation**: Update module docstrings, function docstrings, and inline comments in Python scripts (`dry_run_rename.py`, `execute_rename.py`, `logger.py`) and Windows batch / VBScript runners (`run_workflow.bat`, `rename_workflow.bat`, `setup_environment.bat`, `create-shortcut.vbs`).
+> 2. **Project Documentation**: Update `README.md`, `rename.md`, and `INSTALL.md` with the new version number, changelog entries, and updated technical specifications.
+> 3. **Workflow Archive**: Immediately re-pack `pdf_rename_workflow.zip` so it always contains the latest scripts, runners, and documentation files.

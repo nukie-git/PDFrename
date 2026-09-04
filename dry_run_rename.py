@@ -1,8 +1,17 @@
-"""dry_run_rename.py (PDFrename v1.4.0)
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "pypdf",
+#     "pillow",
+#     "rapidocr-onnxruntime",
+# ]
+# ///
+"""dry_run_rename.py (PDFrename v1.5.0)
 
 Automated dry run scanner and preview generator for Bank Mandiri (KOPRA) transfer proofs
 (Single Transfer & Multiple Transfer) and image-based scanned bon receipts (IMG_YYYYMMDD_*).
 
+Supports execution via standard Python or Astral uv (via PEP 723 inline metadata).
 Scans target directory, extracts metadata via pypdf and RapidOCR, resolves filename collisions,
 formats filenames, flags low-confidence fallback reads (with -missed suffix and warning flags),
 renders a visual Markdown preview table, and saves a preview-locked snapshot mapping to

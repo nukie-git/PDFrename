@@ -1,4 +1,4 @@
-# PDFrename `v1.4.0`
+# PDFrename `v1.5.0`
 
 **PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs and image-based bon receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
@@ -8,6 +8,9 @@
 
 - **Automated Metadata Parsing**: Extracts `Creation Date`, `Destination Account` (beneficiary), and `Remark` directly from Mandiri transfer receipt text using `pypdf`.
 - **Multi-Layer Bon Scan OCR**: Runs `rapidocr-onnxruntime` on scanned bon PDFs (`IMG_YearMonthDate_*`). A single OCR pass feeds both a **date** extractor (printed LUNAS stamp date first, handwritten date field as fallback) and a **vendor name** extractor (heuristic read of the header lines at the top of the scan).
+- **Dual Runtime & Astral `uv` Support**: Seamlessly executes via standard Python or Astral `uv`. Python scripts include PEP 723 inline dependency metadata (`# /// script`) for automatic zero-configuration dependency management under `uv run`.
+- **Automated Setup & Winget Integration**: If neither Python nor `uv` is found, `setup_environment.bat` automatically offers to install Astral `uv` or Python via `winget` and refreshes the session PATH to resume work without manual terminal restarts.
+- **Desktop Shortcut Creator (`create-shortcut.vbs`)**: Automatically creates Windows Desktop shortcuts upon environment setup (or manually on demand) for 1-click Downloads renaming or drag-and-drop custom folder renaming.
 - **Preview-Locked Execution**: The dry run writes the exact mapping you're shown to a snapshot file (`logs/pending_mapping.json`). `execute_rename.py` renames from that snapshot instead of independently re-scanning — so what gets renamed is guaranteed to be what you approved, not a fresh guess that could differ if a file changed in between. The snapshot is refused if it's for a different folder or more than an hour old.
 - **Low-Confidence Warnings**: When OCR is unavailable, finds no readable date, or can't confidently read a vendor header, the preview table flags that row with `⚠️` and a plain-language reason instead of silently guessing. Rows without a `⚠️` were read with confidence; rows with one are a fallback guess worth checking by hand.
 - **Safe 2-Step Windows Renaming with Rollback**: Uses a temporary file (`.tmp_rename`) during renaming to support Windows case-only filename updates. If the second rename step fails partway (locked file, path too long, disk full), the file is rolled back to its original name instead of being left stuck as `<name>.pdf.tmp_rename`.
@@ -50,9 +53,11 @@ PDFrename/
 ├── logger.py                 # Daily rotating logger module (keeps 7 most recent log files)
 ├── rename_workflow.bat       # Windows runner defaulting to %USERPROFILE%\Downloads
 ├── run_workflow.bat          # Generic Windows runner (accepts custom target path)
+├── setup_environment.bat     # Interactive environment & runtime installer (Python / uv / winget)
+├── create-shortcut.vbs       # Generates Desktop shortcuts for 1-click execution and drag-and-drop
 ├── rename.md                 # Detailed SOP and naming specification document
 ├── INSTALL.md                # Installation and setup guide
-├── .gitignore                # Git ignore configuration (ignores *.pdf, logs/, cache)
+├── .gitignore                # Git ignore configuration (ignores *.pdf, logs/, .venv/, cache)
 └── logs/                     # Auto-generated daily log directory (YYYYMMDD.log) + pending_mapping.json
 ```
 
@@ -68,6 +73,12 @@ The dry run's approved-mapping snapshot also lives in `logs/pending_mapping.json
 ---
 
 ## 📋 Changelog
+
+### `v1.5.0` (2026-09-04)
+- **Astral `uv` Runtime & PEP 723 Support**: Added automatic fallback to Astral `uv` if Python is not installed or not in `PATH`. Embeds PEP 723 inline script metadata (`# /// script`) in `dry_run_rename.py` and `execute_rename.py` for zero-setup execution and automatic dependency isolation.
+- **Dedicated Environment Setup & Winget Auto-Installer (`setup_environment.bat`)**: Automatically prompts to install Astral `uv` or Python 3.12 via `winget` if neither is detected, refreshes the active session `PATH` from registry, and immediately resumes the workflow without needing to restart the terminal.
+- **Desktop Shortcut Creator (`create-shortcut.vbs`)**: Added VBScript desktop shortcut generator that runs automatically upon environment setup (and can be run standalone) supporting 1-click Downloads renaming and drag-and-drop custom folder renaming onto the shortcut icon.
+- **Batch Script Delegation**: Both `run_workflow.bat` and `rename_workflow.bat` seamlessly detect the available runtime (`python` vs `uv run`), dynamically delegate missing environment setup to `setup_environment.bat`, and resume execution cleanly.
 
 ### `v1.4.0` (2026-09-02)
 - **Support for Mandiri "Multiple Transfer" Receipts**: Added support for Mandiri KOPRA *Multiple Transfer By Manual Input / File Upload* receipts. Expanded date parsing to include `Execution Date`, account extraction for `Credit Account Number`, and smart remark defaults (`Transfer`).

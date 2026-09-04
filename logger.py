@@ -1,4 +1,4 @@
-"""logger.py (PDFrename v1.4.0)
+"""logger.py (PDFrename v1.5.0)
 
 Daily rotating logger module. Manages the logs/ directory, writes daily log files (logs/YYYYMMDD.log),
 and automatically prunes old log files beyond the 7 most recent days.

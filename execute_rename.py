@@ -1,7 +1,15 @@
-"""execute_rename.py (PDFrename v1.4.0)
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "pypdf",
+#     "pillow",
+#     "rapidocr-onnxruntime",
+# ]
+# ///
+"""execute_rename.py (PDFrename v1.5.0)
 
 Safe file renamer executing strictly from the preview-locked snapshot (logs/pending_mapping.json)
-generated during the last dry run.
+generated during the last dry run. Supports execution via Python or Astral uv.
 
 Enforces directory verification, maximum snapshot age validation (1 hour), Windows 2-step
 case-only temporary renaming (.tmp_rename), automatic rollback on partial rename failure,

@@ -1,4 +1,4 @@
-# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.4.0)
+# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.5.0)
 
 This document defines the standard operating procedure for parsing and renaming PDF transaction receipts and scanned bon receipts within this project directory. Any AI assistant or conversation should read and follow this guide when triggered.
 
@@ -65,9 +65,13 @@ Example output: `bon_bentang_20260824.pdf` (or `bon_bentang_20260829-missed.pdf`
 
 ## 4. Helper Scripts Reference
 
-- [dry_run_rename.py](dry_run_rename.py): Parses all PDFs in the directory (including OCR for scanned bons), outputs a preview table with warnings/collision resolution, and writes `logs/pending_mapping.json`.
-- [execute_rename.py](execute_rename.py): Renames files strictly from `logs/pending_mapping.json`, with rollback on partial rename failure.
+- [dry_run_rename.py](dry_run_rename.py): Parses all PDFs in the directory (including OCR for scanned bons), outputs a preview table with warnings/collision resolution, and writes `logs/pending_mapping.json`. Supports PEP 723 execution under `uv run`.
+- [execute_rename.py](execute_rename.py): Renames files strictly from `logs/pending_mapping.json`, with rollback on partial rename failure. Supports PEP 723 execution under `uv run`.
 - [logger.py](logger.py): Logs operation activities to `logs/YYYYMMDD.log` with a 7-day daily rotation policy.
+- [setup_environment.bat](setup_environment.bat): Environment configuration utility that detects Python/uv, automates winget installations, and refreshes session PATH.
+- [create-shortcut.vbs](create-shortcut.vbs): Creates desktop shortcuts for 1-click execution and folder drag-and-drop.
+- [run_workflow.bat](run_workflow.bat): General runner with automatic Python/uv detection and custom folder input.
+- [rename_workflow.bat](rename_workflow.bat): Runner targeting `%USERPROFILE%\Downloads`.
 
 ---
 
