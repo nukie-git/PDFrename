@@ -6,6 +6,7 @@ cd /d "%~dp0."
 
 echo ===================================================
 echo   PDFrename Environment ^& Dependency Setup (v1.5.0)
+echo   © nukie 2026
 echo ===================================================
 echo(
 

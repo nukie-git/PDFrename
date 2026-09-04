@@ -9,6 +9,7 @@ set "TARGET_DIR=%USERPROFILE%\Downloads"
 
 echo ===================================================
 echo   PDF Transaction Receipt Renaming Workflow Tool
+echo   © nukie 2026
 echo   Target Folder: !TARGET_DIR!
 echo ===================================================
 echo(
