@@ -28,7 +28,7 @@ Ensure the version string (e.g. `vX.Y.Z`) is updated consistently across:
 
 ### 3. Workflow Archive Packaging Flow
 The release archive MUST follow the root-directory encapsulation structure:
-- **Tracked Archive Filename**: `pdf_rename_workflow.zip`
+- **Tracked Archive Filename**: `PDFrename.zip`
 - **Root Directory Inside Archive**: All files must be nested inside a single top-level `PDFrename/` directory so unzipping produces a clean folder rather than scattering files:
   ```
   PDFrename/
@@ -52,7 +52,7 @@ The release archive MUST follow the root-directory encapsulation structure:
 - `LICENSE` MUST always be included in the package.
 
 ### 4. Git Commit & Annotated Tagging
-- Commit the repacked `pdf_rename_workflow.zip` and all code/documentation updates to `main`.
+- Commit the repacked `PDFrename.zip` and all code/documentation updates to `main`.
 - Push commit to `origin/main`.
 - Create an annotated git tag pointing to the exact release commit:
   ```bash

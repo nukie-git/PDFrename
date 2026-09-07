@@ -33,4 +33,4 @@ If the user triggers this workflow (e.g. by typing `"start"`):
 > **ALWAYS ADD & UPDATE DOCUMENTATION**: Whenever any script, regex pattern, template, runner, or workflow logic is created or significantly modified:
 > 1. **Inline Code Documentation**: Update module docstrings, function docstrings, and inline comments in Python scripts (`dry_run_rename.py`, `execute_rename.py`, `logger.py`) and Windows batch / VBScript runners (`run_workflow.bat`, `rename_workflow.bat`, `setup_environment.bat`, `create-shortcut.vbs`).
 > 2. **Project Documentation**: Update `README.md`, `rename.md`, and `INSTALL.md` with the new version number, changelog entries, and updated technical specifications.
-> 3. **Workflow Archive & Releases**: Re-pack `pdf_rename_workflow.zip` under the `PDFrename/` root directory encapsulation with `LICENSE`, and manage GitHub releases according to [.agents/rules/release_workflow.md](release_workflow.md).
+> 3. **Workflow Archive & Releases**: Re-pack `PDFrename.zip` under the `PDFrename/` root directory encapsulation with `LICENSE`, and manage GitHub releases according to [.agents/rules/release_workflow.md](release_workflow.md).
