@@ -1,4 +1,4 @@
-# Installation & How-To Guide (v1.5.0)
+# Installation & How-To Guide (v1.6.0)
 
 This guide explains how to install and run the PDF Transaction Receipt & Bon Renaming workflow in a clean Windows environment or Google Antigravity workspace.
 
@@ -17,7 +17,7 @@ Ensure the files are placed as follows:
 ├── create-shortcut.vbs    <-- VBScript desktop shortcut creator
 ├── run_workflow.bat       <-- General Runner (Accepts target folder parameter or drag-and-drop)
 ├── rename_workflow.bat    <-- Specific Runner (Defaults to %USERPROFILE%\Downloads)
-├── dry_run_rename.py      <-- Dry run preview scanner & OCR parser (PEP 723 enabled)
+├── dry_run_rename.py      <-- Dry run preview scanner & multi-engine parser (PEP 723 enabled)
 ├── execute_rename.py      <-- Rename executor (renames strictly from logs/pending_mapping.json)
 ├── logger.py              <-- Daily rotating logger (keeps last 7 log files)
 ├── logs/                  <-- Auto-created folder for daily logs (YYYYMMDD.log) and pending_mapping.json
@@ -47,7 +47,7 @@ The batch file will automatically:
    - If Python is not found, automatically falls back to Astral **`uv`** (`uv run`).
    - If neither is found, seamlessly launches `setup_environment.bat` which prompts you to install either Astral `uv` or Python 3.12 via `winget`, refreshes your session `PATH`, and resumes workflow execution.
 2. **Resolve Dependencies**:
-   - If using `python`: checks for `pypdf`, `pillow`, and `rapidocr-onnxruntime` and prompts to install them via `pip install`.
+   - If using `python`: checks for `pypdf`, `pillow`, `fonttools`, `rapidocr-onnxruntime`, `pdfplumber`, and `pymupdf`. Packages $< 5\text{ MB}$ (`pypdf`, `pillow`, `fonttools`) are downloaded together, while packages $\ge 5\text{ MB}$ (`pdfplumber`, `rapidocr-onnxruntime`, `pymupdf`) are installed singularly in sequence to avoid network/RAM saturation.
    - If using `uv`: dependencies are automatically managed via PEP 723 inline script metadata (`# /// script`) in an isolated cache.
 3. **Dry Run Preview**: Runs the preview scan on the target folder (performing OCR for scanned image PDFs if needed).
 4. **Pending Snapshot**: Saves the exact previewed mapping to `logs/pending_mapping.json`.

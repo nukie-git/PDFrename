@@ -4,17 +4,21 @@
 #     "pypdf",
 #     "pillow",
 #     "rapidocr-onnxruntime",
+#     "fonttools",
+#     "pdfplumber",
+#     "pymupdf",
 # ]
 # ///
-"""dry_run_rename.py (PDFrename v1.5.0)
+"""dry_run_rename.py (PDFrename v1.6.0)
 
 Automated dry run scanner and preview generator for Bank Mandiri (KOPRA) transfer proofs
 (Single Transfer & Multiple Transfer) and image-based scanned bon receipts (IMG_YYYYMMDD_*).
 
 Supports execution via standard Python or Astral uv (via PEP 723 inline metadata).
-Scans target directory, extracts metadata via pypdf and RapidOCR, resolves filename collisions,
-formats filenames, flags low-confidence fallback reads (with -missed suffix and warning flags),
-renders a visual Markdown preview table, and saves a preview-locked snapshot mapping to
+Scans target directory, extracts metadata via multi-engine PDF parsing (pypdf, FontTools,
+PyMuPDF, and pdfplumber) and RapidOCR, resolves filename collisions, formats filenames,
+flags low-confidence fallback reads (with -missed suffix and warning flags), renders a
+visual Markdown preview table, and saves a preview-locked snapshot mapping to
 logs/pending_mapping.json for execute_rename.py.
 """
 
@@ -26,12 +30,32 @@ from datetime import datetime
 from pypdf import PdfReader
 
 from logger import log, get_logs_dir
+from updater import check_and_prompt_update, finalize_deferred_update
 
 try:
     from rapidocr_onnxruntime import RapidOCR
     ocr_engine = RapidOCR()
 except Exception:
     ocr_engine = None
+
+try:
+    import fontTools
+    from fontTools.ttLib import TTFont
+    has_fonttools = True
+except Exception:
+    has_fonttools = False
+
+try:
+    import pymupdf
+    has_pymupdf = True
+except Exception:
+    has_pymupdf = False
+
+try:
+    import pdfplumber
+    has_pdfplumber = True
+except Exception:
+    has_pdfplumber = False
 
 MONTH_MAP = {
     'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
@@ -239,6 +263,221 @@ VENDOR_NAME_STRIP_WORDS = {'SABILULUNGAN'}
 DEFAULT_BON_VENDOR = 'Bentang'
 
 
+# --- Multi-engine text extraction ----------------------------------------
+
+RECEIPT_CONTENT_PATTERN = re.compile(
+    r'(Single Transfer|Multiple Transfer|Creation Date|Execution Date|Instruction Date|Destination Account|Credit Account|Transfer To|LUNAS)',
+    re.IGNORECASE
+)
+
+
+def _has_receipt_content(text):
+    return bool(text and RECEIPT_CONTENT_PATTERN.search(text))
+
+
+def _build_tounicode_cmap(cmap_mapping):
+    """Build a compliant /ToUnicode CMap stream from {char_code: unicode_char}."""
+    lines = [
+        b"/CIDInit /ProcSet findresource begin",
+        b"12 dict begin",
+        b"begincmap",
+        b"/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def",
+        b"/CMapName /FontTools-Recovered-ToUnicode def",
+        b"/CMapType 2 def",
+        b"1 begincodespacerange",
+        b"<0000> <FFFF>",
+        b"endcodespacerange",
+    ]
+    items = [(code, uchar) for code, uchar in cmap_mapping.items() if 0 <= code <= 0xFFFF]
+    chunk_size = 100
+    for i in range(0, len(items), chunk_size):
+        chunk = items[i:i + chunk_size]
+        lines.append(f"{len(chunk)} beginbfchar".encode("ascii"))
+        for code, uchar in chunk:
+            code_hex = f"{code:04X}"
+            uni_hex = "".join(f"{ord(c):04X}" for c in uchar)
+            lines.append(f"<{code_hex}> <{uni_hex}>".encode("ascii"))
+        lines.append(b"endbfchar")
+    lines.extend([
+        b"endcmap",
+        b"CMapName currentdict /CMap defineresource pop",
+        b"end end",
+    ])
+    return b"\n".join(lines)
+
+
+def _extract_text_with_fonttools(reader):
+    """Inspect embedded TrueType/OpenType fonts lacking /ToUnicode and synthesize CMaps."""
+    if not has_fonttools:
+        return ""
+    import io
+    from pypdf.generic import NameObject, StreamObject
+
+    font_injected = False
+    for page in reader.pages:
+        try:
+            resources = page.get('/Resources')
+            if hasattr(resources, 'get_object'):
+                resources = resources.get_object()
+            if not resources or '/Font' not in resources:
+                continue
+
+            fonts_dict = resources['/Font']
+            if hasattr(fonts_dict, 'get_object'):
+                fonts_dict = fonts_dict.get_object()
+            if not isinstance(fonts_dict, dict):
+                continue
+
+            for font_alias, font_ref in fonts_dict.items():
+                font_obj = font_ref.get_object() if hasattr(font_ref, 'get_object') else font_ref
+                if not isinstance(font_obj, dict):
+                    continue
+
+                if '/ToUnicode' not in font_obj:
+                    font_desc = font_obj.get('/FontDescriptor')
+                    if hasattr(font_desc, 'get_object'):
+                        font_desc = font_desc.get_object()
+                    if not font_desc or not isinstance(font_desc, dict):
+                        continue
+
+                    for stream_key in ('/FontFile2', '/FontFile3', '/FontFile'):
+                        if stream_key in font_desc:
+                            stream_obj = font_desc[stream_key]
+                            if hasattr(stream_obj, 'get_object'):
+                                stream_obj = stream_obj.get_object()
+                            data = stream_obj.get_data() if hasattr(stream_obj, 'get_data') else None
+                            if not data:
+                                continue
+
+                            try:
+                                tt = TTFont(io.BytesIO(data))
+                                best_cmap = tt.getBestCMap()
+                                if best_cmap:
+                                    mapping = {}
+                                    for code, val in best_cmap.items():
+                                        if isinstance(val, int):
+                                            mapping[code] = chr(val)
+                                        elif isinstance(val, str):
+                                            mapping[code] = val
+                                    if mapping:
+                                        cmap_stream = StreamObject()
+                                        cmap_stream.set_data(_build_tounicode_cmap(mapping))
+                                        font_obj[NameObject('/ToUnicode')] = cmap_stream
+                                        font_injected = True
+                                        log(f"FontTools synthesized /ToUnicode CMap for font '{font_alias}' ({len(mapping)} glyphs).", "DEBUG")
+                            except Exception as fe:
+                                log(f"Could not parse font stream with FontTools: {fe}", "DEBUG")
+        except Exception as pe:
+            log(f"FontTools page inspection failed: {pe}", "DEBUG")
+
+    if font_injected:
+        pages_text = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                pages_text.append(t)
+        return '\n'.join(pages_text)
+
+    return ""
+
+
+def _extract_text_with_pymupdf(filepath):
+    """Extract text using PyMuPDF (fast C engine, resilient for complex fonts/Word layouts)."""
+    if not has_pymupdf:
+        return ""
+    try:
+        doc = pymupdf.open(filepath)
+        chunks = []
+        for page in doc:
+            t = page.get_text()
+            if t:
+                chunks.append(t)
+        doc.close()
+        return '\n'.join(chunks).strip()
+    except Exception as e:
+        log(f"PyMuPDF extraction failed for '{os.path.basename(filepath)}': {e}", "DEBUG")
+        return ""
+
+
+def _extract_text_with_pdfplumber(filepath):
+    """Extract text and tabular data using pdfplumber (optimized for Excel conversions)."""
+    if not has_pdfplumber:
+        return ""
+    try:
+        chunks = []
+        with pdfplumber.open(filepath) as pdf:
+            for page in pdf.pages:
+                t = page.extract_text(x_tolerance=2, y_tolerance=2)
+                if t:
+                    chunks.append(t)
+                tables = page.extract_tables()
+                for table in tables:
+                    for row in table:
+                        row_cells = [str(cell).strip() for cell in row if cell is not None]
+                        if row_cells:
+                            chunks.append('   '.join(row_cells))
+        return '\n'.join(chunks).strip()
+    except Exception as e:
+        log(f"pdfplumber extraction failed for '{os.path.basename(filepath)}': {e}", "DEBUG")
+        return ""
+
+
+def extract_pdf_text(filepath, reader):
+    """Multi-engine PDF text extractor.
+    
+    1. Primary: Standard pypdf extraction (which automatically leverages fontTools
+       for embedded CFF Type 1 fonts).
+    2. FontTools Fallback: Synthesizes missing /ToUnicode CMaps for TrueType/OpenType fonts.
+    3. PyMuPDF Fallback: Resolves complex fonts and Word-converted layouts.
+    4. pdfplumber Fallback: Reconstructs tables and grids from Excel-converted PDFs.
+    """
+    text = ""
+    try:
+        pages_text = [page.extract_text() or "" for page in reader.pages]
+        text = "\n".join(pages_text).strip()
+    except Exception as e:
+        log(f"pypdf standard text extraction failed for '{os.path.basename(filepath)}': {e}", "DEBUG")
+
+    if _has_receipt_content(text):
+        return text
+
+    # If text is empty or missing expected receipt content, attempt fallbacks
+    if has_fonttools:
+        try:
+            ft_text = _extract_text_with_fonttools(reader)
+            if ft_text and (_has_receipt_content(ft_text) or not text):
+                text = ft_text.strip()
+                if _has_receipt_content(text):
+                    log(f"Recovered receipt text using FontTools for '{os.path.basename(filepath)}'.", "INFO")
+                    return text
+        except Exception as e:
+            log(f"FontTools fallback error: {e}", "DEBUG")
+
+    if has_pymupdf:
+        try:
+            fitz_text = _extract_text_with_pymupdf(filepath)
+            if fitz_text and (_has_receipt_content(fitz_text) or not text):
+                text = fitz_text
+                if _has_receipt_content(text):
+                    log(f"Recovered receipt text using PyMuPDF for '{os.path.basename(filepath)}'.", "INFO")
+                    return text
+        except Exception as e:
+            log(f"PyMuPDF fallback error: {e}", "DEBUG")
+
+    if has_pdfplumber:
+        try:
+            plumber_text = _extract_text_with_pdfplumber(filepath)
+            if plumber_text and (_has_receipt_content(plumber_text) or not text):
+                text = plumber_text
+                if _has_receipt_content(text):
+                    log(f"Recovered receipt text using pdfplumber for '{os.path.basename(filepath)}'.", "INFO")
+                    return text
+        except Exception as e:
+            log(f"pdfplumber fallback error: {e}", "DEBUG")
+
+    return text
+
+
 # --- Main mapping --------------------------------------------------------
 
 def get_rename_mapping(directory='.'):
@@ -255,7 +494,7 @@ def get_rename_mapping(directory='.'):
         filename = os.path.basename(f)
         try:
             reader = PdfReader(f)
-            text = '\n'.join([page.extract_text() for page in reader.pages])
+            text = extract_pdf_text(f, reader)
 
             # Check if file matches IMG_YearMonthDate_* pattern (e.g. IMG_20260806_0001.pdf)
             img_match = re.match(r'^IMG_(\d{8})_.*\.pdf$', filename, re.IGNORECASE)
@@ -480,9 +719,17 @@ if __name__ == '__main__':
         except Exception:
             pass
     target_dir = sys.argv[1] if len(sys.argv) > 1 else '.'
+
+    # Check GitHub repository for script updates on start
+    try:
+        check_and_prompt_update()
+    except Exception as e:
+        log(f"Update check skipped on error: {e}", "DEBUG")
+
     mapping = get_rename_mapping(target_dir)
     if not mapping:
         print("No eligible PDF files to rename exist in target folder.")
+        finalize_deferred_update()
         sys.exit(2)
     print_markdown_preview(mapping)
     save_pending_mapping(target_dir, mapping)

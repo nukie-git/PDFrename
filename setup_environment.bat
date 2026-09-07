@@ -6,7 +6,7 @@ REM Force working directory to the directory of this batch script
 cd /d "%~dp0."
 
 echo ===================================================
-echo   PDFrename Environment ^& Dependency Setup (v1.5.0)
+echo   PDFrename Environment ^& Dependency Setup (v1.6.0)
 echo   © nukie 2026
 echo ===================================================
 echo(
@@ -105,24 +105,48 @@ exit /b 1
 
 :check_python_deps
 echo(
-echo Checking required Python dependencies (pypdf, pillow, rapidocr-onnxruntime)...
-python -c "import pypdf, PIL, rapidocr_onnxruntime" >nul 2>&1
+echo Checking required Python dependencies (pypdf, pillow, fonttools, rapidocr-onnxruntime, pdfplumber, pymupdf)...
+python -c "import pypdf, PIL, fontTools, rapidocr_onnxruntime, pdfplumber, pymupdf" >nul 2>&1
 if !errorlevel! equ 0 (
     echo [SUCCESS] All required dependencies are installed.
     goto setup_complete
 )
 
-echo [INFO] Required dependencies are missing: pypdf, pillow, rapidocr-onnxruntime.
+echo [INFO] Required dependencies are missing: pypdf, pillow, fonttools, rapidocr-onnxruntime, pdfplumber, pymupdf.
 set /p dep_choice="Would you like to install missing dependencies now? (Y/N): "
 if /i "!dep_choice!"=="Y" (
-    echo Installing pypdf, pillow, and rapidocr-onnxruntime via pip...
-    pip install pypdf pillow rapidocr-onnxruntime
+    echo Installing dependencies via pip...
+    REM Install lightweight packages together
+    echo [1/4] Installing lightweight dependencies: pypdf, pillow, fonttools
+    pip install pypdf pillow fonttools
     if !errorlevel! neq 0 (
-        echo [ERROR] Failed to install dependencies via pip.
+        echo [ERROR] Failed to install lightweight dependencies via pip.
         pause
         exit /b 1
     )
-    echo [SUCCESS] Dependencies installed successfully.
+    REM Install larger packages singularly to avoid parallel download saturation
+    echo [2/4] Installing pdfplumber
+    pip install pdfplumber
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to install pdfplumber via pip.
+        pause
+        exit /b 1
+    )
+    echo [3/4] Installing rapidocr-onnxruntime
+    pip install rapidocr-onnxruntime
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to install rapidocr-onnxruntime via pip.
+        pause
+        exit /b 1
+    )
+    echo [4/4] Installing pymupdf
+    pip install pymupdf
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to install pymupdf via pip.
+        pause
+        exit /b 1
+    )
+    echo [SUCCESS] All dependencies installed successfully.
     goto setup_complete
 ) else (
     echo [WARNING] Missing required dependencies.
@@ -132,7 +156,7 @@ if /i "!dep_choice!"=="Y" (
 :check_uv_ready
 echo(
 echo [INFO] Astral uv runtime is active.
-echo Dependencies (pypdf, pillow, rapidocr-onnxruntime) are managed automatically
+echo Dependencies (pypdf, pillow, rapidocr-onnxruntime, fonttools, pdfplumber, pymupdf) are managed automatically
 echo via PEP 723 inline script metadata upon workflow execution.
 goto setup_complete
 

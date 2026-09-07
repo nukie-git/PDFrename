@@ -47,20 +47,44 @@ goto detect_runtime
 
 :check_dependencies
 if !USING_UV! equ 0 (
-    REM Check dependencies (pypdf, pillow, rapidocr-onnxruntime)
-    python -c "import pypdf, PIL, rapidocr_onnxruntime" >nul 2>&1
+    REM Check dependencies: pypdf, pillow, fonttools, rapidocr-onnxruntime, pdfplumber, pymupdf
+    python -c "import pypdf, PIL, fontTools, rapidocr_onnxruntime, pdfplumber, pymupdf" >nul 2>&1
     if !errorlevel! neq 0 (
-        echo [INFO] Required Python dependencies are missing: pypdf, pillow, rapidocr-onnxruntime.
+        echo [INFO] Required Python dependencies are missing: pypdf, pillow, fonttools, rapidocr-onnxruntime, pdfplumber, pymupdf.
         set /p install_choice="Would you like to install missing dependencies now? (Y/N): "
         if /i "!install_choice!"=="Y" (
-            echo Installing pypdf, pillow, and rapidocr-onnxruntime...
-            pip install pypdf pillow rapidocr-onnxruntime
+            echo Installing dependencies via pip...
+            REM Install lightweight packages together
+            echo [1/4] Installing lightweight dependencies: pypdf, pillow, fonttools
+            pip install pypdf pillow fonttools
             if !errorlevel! neq 0 (
-                echo [ERROR] Failed to install dependencies. Please run 'pip install pypdf pillow rapidocr-onnxruntime' manually.
+                echo [ERROR] Failed to install lightweight dependencies via pip.
                 pause
                 exit /b 1
             )
-            echo [SUCCESS] Dependencies installed successfully.
+            REM Install larger packages singularly to avoid parallel download saturation
+            echo [2/4] Installing pdfplumber
+            pip install pdfplumber
+            if !errorlevel! neq 0 (
+                echo [ERROR] Failed to install pdfplumber via pip.
+                pause
+                exit /b 1
+            )
+            echo [3/4] Installing rapidocr-onnxruntime
+            pip install rapidocr-onnxruntime
+            if !errorlevel! neq 0 (
+                echo [ERROR] Failed to install rapidocr-onnxruntime via pip.
+                pause
+                exit /b 1
+            )
+            echo [4/4] Installing pymupdf
+            pip install pymupdf
+            if !errorlevel! neq 0 (
+                echo [ERROR] Failed to install pymupdf via pip.
+                pause
+                exit /b 1
+            )
+            echo [SUCCESS] All dependencies installed successfully.
         ) else (
             echo [WARNING] Missing required dependencies. Cannot run rename workflow.
             pause

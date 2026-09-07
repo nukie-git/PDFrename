@@ -4,9 +4,12 @@
 #     "pypdf",
 #     "pillow",
 #     "rapidocr-onnxruntime",
+#     "fonttools",
+#     "pdfplumber",
+#     "pymupdf",
 # ]
 # ///
-"""execute_rename.py (PDFrename v1.5.0)
+"""execute_rename.py (PDFrename v1.6.0)
 
 Safe file renamer executing strictly from the preview-locked snapshot (logs/pending_mapping.json)
 generated during the last dry run. Supports execution via Python or Astral uv.
@@ -22,6 +25,7 @@ from datetime import datetime, timedelta
 
 from dry_run_rename import get_pending_path
 from logger import log
+from updater import finalize_deferred_update
 
 MAX_SNAPSHOT_AGE = timedelta(hours=1)
 
@@ -145,6 +149,9 @@ def rename_files(directory='.'):
                 log(f"Cleaned up pending mapping snapshot: {pending_path}", "INFO")
             except Exception as e:
                 log(f"Failed to remove pending mapping snapshot ({pending_path}): {e}", "WARNING")
+
+        # Finalize any deferred GitHub updates scheduled with Option [2]
+        finalize_deferred_update()
 
 
 if __name__ == '__main__':

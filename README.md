@@ -1,4 +1,4 @@
-# PDFrename `v1.5.0`
+# PDFrename `v1.6.0`
 
 **PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs and image-based bon receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
@@ -6,7 +6,8 @@
 
 ## 🌟 Key Features
 
-- **Automated Metadata Parsing**: Extracts `Creation Date`, `Destination Account` (beneficiary), and `Remark` directly from Mandiri transfer receipt text using `pypdf`.
+- **Automated Metadata Parsing & Multi-Engine Text Extraction**: Extracts `Creation Date`, `Destination Account` (beneficiary), and `Remark` directly from Mandiri transfer receipts. Implements an adaptive multi-tier text extraction pipeline (`pypdf` + `fonttools` + `pymupdf` + `pdfplumber`) to handle embedded fonts lacking `/ToUnicode` maps and Word/Excel converted receipts.
+- **GitHub Repository Auto-Updater (`updater.py`)**: Checks the remote GitHub repository (`https://github.com/nukie-git/PDFrename`) on script start. If updates are found, it downloads and stages the update, prompting you to either restart immediately with the update or continue processing first and finalize the update automatically upon completion.
 - **Multi-Layer Bon Scan OCR**: Runs `rapidocr-onnxruntime` on scanned bon PDFs (`IMG_YearMonthDate_*`). A single OCR pass feeds both a **date** extractor (printed LUNAS stamp date first, handwritten date field as fallback) and a **vendor name** extractor (heuristic read of the header lines at the top of the scan).
 - **Dual Runtime & Astral `uv` Support**: Seamlessly executes via standard Python or Astral `uv`. Python scripts include PEP 723 inline dependency metadata (`# /// script`) for automatic zero-configuration dependency management under `uv run`.
 - **Automated Setup & Winget Integration**: If neither Python nor `uv` is found, `setup_environment.bat` automatically offers to install Astral `uv` or Python via `winget` and refreshes the session PATH to resume work without manual terminal restarts.
@@ -50,6 +51,7 @@ Check the preview table for any `⚠️` rows — those are fallback guesses (OC
 PDFrename/
 ├── dry_run_rename.py         # Parses PDFs/OCR, generates preview table, writes pending mapping snapshot
 ├── execute_rename.py         # Renames files from the pending snapshot, with rollback on partial failure
+├── updater.py                # GitHub auto-update checker, staging downloader & deferred updater
 ├── logger.py                 # Daily rotating logger module (keeps 7 most recent log files)
 ├── rename_workflow.bat       # Windows runner defaulting to %USERPROFILE%\Downloads
 ├── run_workflow.bat          # Generic Windows runner (accepts custom target path)
@@ -73,6 +75,12 @@ The dry run's approved-mapping snapshot also lives in `logs/pending_mapping.json
 ---
 
 ## 📋 Changelog
+
+### `v1.6.0` (2026-09-07)
+- **GitHub Repository Auto-Updater (`updater.py`)**: Added automated update checking against `https://github.com/nukie-git/PDFrename` on script start. When a newer commit is available, it downloads/stages the update and prompts the user to either [1] restart immediately with the updated code or [2] continue the current run and finalize the update automatically upon workflow completion.
+- **Multi-Engine PDF Extraction (`fonttools`, `pdfplumber`, `pymupdf`)**: Added support for advanced font decoding and Word/Excel converted PDF parsing. `dry_run_rename.py` uses standard `pypdf` (accelerated by `fonttools` for CFF Type 1 fonts), falls back to dynamic `/ToUnicode` CMap synthesis via `fonttools` for embedded TrueType fonts, and falls back to `pymupdf` (complex fonts / paragraph layouts) and `pdfplumber` (table and gridline extraction for Excel conversions).
+- **Singular Download Sequencing**: Optimized dependency installation across `setup_environment.bat`, `run_workflow.bat`, and `rename_workflow.bat`. Packages $< 5\text{ MB}$ (`pypdf`, `pillow`, `fonttools`) are downloaded together, while packages $\ge 5\text{ MB}$ (`pdfplumber`, `rapidocr-onnxruntime`, `pymupdf`) are installed singularly in separate sequential steps to protect host RAM and disk bandwidth.
+- **PEP 723 Dependency Sync**: Synchronized all inline script metadata in `dry_run_rename.py` and `execute_rename.py` with `fonttools`, `pdfplumber`, and `pymupdf`.
 
 ### `v1.5.0` (2026-09-04)
 - **Astral `uv` Runtime & PEP 723 Support**: Added automatic fallback to Astral `uv` if Python is not installed or not in `PATH`. Embeds PEP 723 inline script metadata (`# /// script`) in `dry_run_rename.py` and `execute_rename.py` for zero-setup execution and automatic dependency isolation.
