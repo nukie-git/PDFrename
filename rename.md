@@ -1,6 +1,6 @@
-# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.6.0)
+# PDF Transaction Receipt & Bon Renaming Workflow SOP (v1.7.0)
 
-This document defines the standard operating procedure for parsing and renaming PDF transaction receipts and scanned bon receipts within this project directory. Any AI assistant or conversation should read and follow this guide when triggered.
+This document defines the standard operating procedure for parsing and renaming PDF transaction receipts, scanned bon receipts, and Tokopedia platform order receipts within this project directory. Any AI assistant or conversation should read and follow this guide when triggered.
 
 ---
 
@@ -11,7 +11,7 @@ This document defines the standard operating procedure for parsing and renaming 
 
 ## 2. Naming Convention Templates
 
-There are two document types, each with its own template.
+There are three document types, each with its own template.
 
 ### 2a. Mandiri transfer receipts (text-based PDF)
 
@@ -38,6 +38,20 @@ Example output: `bon_bentang_20260824.pdf` (or `bon_bentang_20260829-missed.pdf`
 | `{vendor}` | OCR of the header lines at the top of the scan | Heuristic: prefer a header line containing `PT`/`CV`/`UD`/`TOKO`/`AGEN`; otherwise the topmost plausible text line | Falls back to a default vendor name with a `⚠️` warning if OCR is unavailable or the header can't be read confidently |
 | `{year}{month}{date}` | 1. Any text layer on the page, then 2. OCR: printed LUNAS stamp date, then 3. OCR: handwritten date field, then 4. the date embedded in the scan's own filename | First successful step wins | Falls back to the filename's own date (the scan date, **not** the transaction date) with a `⚠️` warning if steps 1–3 all fail |
 
+### 2c. Tokopedia platform receipts (order receipt PDF)
+
+$$\text{\{year\}\{month\}\{date\}} \quad \text{\{pembeli\}} \quad \text{\{info produk\}}.pdf$$
+
+Example output: `20260903 nukie Kotak Tempat wifi Router Rak wifi Rak Dinding Gantung Modem Wifi - Putih.pdf`
+
+| Field | Source Field in Document | Formatting & Normalization Rules | Example Input $\rightarrow$ Output |
+| :--- | :--- | :--- | :--- |
+| `{year}{month}{date}` | `Tanggal Pembelian` | `YYYYMMDD` 8-digit format. Supports Indonesian & English months. | `03 September 2026` $\rightarrow$ `20260903` |
+| `{pembeli}` | `Pembeli` (or `Penerima`) | Preserved as printed (no forced title casing) to retain username fidelity. | `nukie` $\rightarrow$ `nukie` |
+| `{info produk}` | `INFO PRODUK ...` (or `Deskripsi`) | Ligatures normalized (`fi`), illegal characters replaced with spaces, whitespace collapsed. | `Kotak Tempat wiﬁ Router Rak wiﬁ / Rak Dinding ...` $\rightarrow$ `Kotak Tempat wifi Router Rak wifi Rak Dinding ...` |
+
+Order receipt numbers (e.g. `585867708756296789`) are extracted during parsing but omitted from the output filename template to keep filenames concise and avoid path-length saturation. All fields are sanitized for invalid OS filename characters (`\ / : * ? " < > \|` replaced with spaces), duplicate whitespace collapsed, edge dots/spaces trimmed, and stems capped at a safe length (`MAX_STEM_LEN = 150`).
+
 ---
 
 ## 3. Strict Workflow
@@ -48,7 +62,8 @@ Example output: `bon_bentang_20260824.pdf` (or `bon_bentang_20260829-missed.pdf`
 1. **Scan PDF Files**: Find all `.pdf` files inside the target folder (e.g. `%USERPROFILE%\Downloads` or current workspace directory).
 2. **Filter & Parse Document Data**:
    - Files matching `IMG_YYYYMMDD_*.pdf` are treated as scanned bons (see §2b).
-   - All other files are checked for `"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"` (case-insensitive); if absent, the file is skipped. Otherwise extract `Creation Date`, `Destination Account`, and `Remark` using `pypdf` (see §2a).
+   - Files matching `TOKOPEDIA` order receipts are extracted using the Tokopedia parser (see §2c).
+   - All other files are checked for `"Single Transfer To Other Bank"`, `"Single Transfer To Mandiri"`, or `"Multiple Transfer"` (case-insensitive); if absent, the file is skipped. Otherwise extract `Creation Date`, `Destination Account`, and `Remark` using `pypdf` (see §2a).
 3. **Generate Visual Dry Run / Preview**:
    Output a clear markdown preview table showing original vs proposed new filenames side-by-side.
    - If proposed filenames conflict with existing files or duplicate receipts, automatically append numbered suffixes like `(1)`, `(2)`, `(3)` to resolve collisions and display a warning banner.

@@ -1,25 +1,25 @@
-# PDFrename `v1.6.0`
+# PDFrename `v1.7.0`
 
-**PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs and image-based bon receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
+**PDFrename** is an automated transaction receipt & bon scan renaming workflow tool for Bank Mandiri (KOPRA) transfer proofs, image-based bon receipts, and Tokopedia platform order receipts. It parses PDF receipts, extracts metadata and document dates via text/OCR, normalizes formatting, resolves filename collisions, and safely renames files for effortless archiving.
 
 ---
 
 ## 🌟 Key Features
 
-- **Automated Metadata Parsing & Multi-Engine Text Extraction**: Extracts `Creation Date`, `Destination Account` (beneficiary), and `Remark` directly from Mandiri transfer receipts. Implements an adaptive multi-tier text extraction pipeline (`pypdf` + `fonttools` + `pymupdf` + `pdfplumber`) to handle embedded fonts lacking `/ToUnicode` maps and Word/Excel converted receipts.
+- **Automated Metadata Parsing & Multi-Engine Text Extraction**: Extracts `Creation Date`, `Destination Account` (beneficiary), and `Remark` directly from Mandiri transfer receipts, as well as `Tanggal Pembelian`, `Pembeli`, and `Info Produk` from Tokopedia platform receipts. Implements an adaptive multi-tier text extraction pipeline (`pypdf` + `fonttools` + `pymupdf` + `pdfplumber`) to handle embedded fonts lacking `/ToUnicode` maps and Word/Excel converted receipts.
 - **GitHub Repository Auto-Updater (`updater.py`)**: Checks the remote GitHub repository (`https://github.com/nukie-git/PDFrename`) on script start. If updates are found, it downloads and stages the update, prompting you to either restart immediately with the update or continue processing first and finalize the update automatically upon completion.
 - **Multi-Layer Bon Scan OCR**: Runs `rapidocr-onnxruntime` on scanned bon PDFs (`IMG_YearMonthDate_*`). A single OCR pass feeds both a **date** extractor (printed LUNAS stamp date first, handwritten date field as fallback) and a **vendor name** extractor (heuristic read of the header lines at the top of the scan).
 - **Dual Runtime & Astral `uv` Support**: Seamlessly executes via standard Python or Astral `uv`. Python scripts include PEP 723 inline dependency metadata (`# /// script`) for automatic zero-configuration dependency management under `uv run`.
-- **Automated Setup & Winget Integration**: If neither Python nor `uv` is found, `setup_environment.bat` automatically offers to install Astral `uv` or Python via `winget` and refreshes the session PATH to resume work without manual terminal restarts.
+- **Automated Setup & WinGet / Runtime Fallback**: If neither Python nor `uv` is found, `setup_environment.bat` automatically offers to install Astral `uv` or Python via `winget`. If `winget` is not available on the machine, it provides automated self-healing options: direct Astral `uv` installation via official PowerShell script, automated WinGet bootstrapping, or official Python 3.12 installation, and refreshes the session PATH to resume work without manual terminal restarts.
 - **Desktop Shortcut Creator (`create-shortcut.vbs`)**: Automatically creates Windows Desktop shortcuts upon environment setup (or manually on demand) for 1-click Downloads renaming or drag-and-drop custom folder renaming.
 - **Preview-Locked Execution**: The dry run writes the exact mapping you're shown to a snapshot file (`logs/pending_mapping.json`). `execute_rename.py` renames from that snapshot instead of independently re-scanning — so what gets renamed is guaranteed to be what you approved, not a fresh guess that could differ if a file changed in between. The snapshot is refused if it's for a different folder or more than an hour old.
 - **Low-Confidence Warnings**: When OCR is unavailable, finds no readable date, or can't confidently read a vendor header, the preview table flags that row with `⚠️` and a plain-language reason instead of silently guessing. Rows without a `⚠️` were read with confidence; rows with one are a fallback guess worth checking by hand.
 - **Safe 2-Step Windows Renaming with Rollback**: Uses a temporary file (`.tmp_rename`) during renaming to support Windows case-only filename updates. If the second rename step fails partway (locked file, path too long, disk full), the file is rolled back to its original name instead of being left stuck as `<name>.pdf.tmp_rename`.
 - **Filename Sanitization**: Strips characters illegal on Windows, trailing dots/spaces, Windows-reserved device names (`CON`, `PRN`, `NUL`, `COM1`...), and caps the filename stem length to stay under Windows' path-length limit.
-- **Standardized Naming Convention**: Transfer receipts use:
-  $$\text{\{YYYYMMDD\}} \quad \text{\{Receiver\}} \quad \text{\{Remark\}}.pdf$$
-  *Example*: `20260728 Muhamad Fahmi Raihan Sul pembelian sayuran bale.pdf`
-  Scanned bons use `bon_{vendor}_{YYYYMMDD}.pdf` (or `bon_{vendor}_{YYYYMMDD}-missed.pdf` if OCR date extraction fails and falls back to the scan date).
+- **Standardized Naming Convention**:
+  - Transfer receipts: `YYYYMMDD {Receiver} {Remark}.pdf` (e.g. `20260728 Muhamad Fahmi Raihan Sul pembelian sayuran bale.pdf`)
+  - Scanned bons: `bon_{vendor}_{YYYYMMDD}.pdf` (e.g. `bon_bentang_20260824.pdf`)
+  - Tokopedia receipts: `YYYYMMDD {Pembeli} {Info Produk}.pdf` (e.g. `20260903 nukie Kotak Tempat wifi Router Rak wifi Rak Dinding Gantung Modem Wifi - Putih.pdf`)
 - **Title Case Normalization**: Converts raw receiver names (e.g. `DEDE MADIN` $\rightarrow$ `Dede Madin`).
 - **Path Portability**: Supports `%USERPROFILE%\Downloads` and environment variable expansion across Windows environments.
 - **Automatic Collision Resolution**: Detects duplicate proposed filenames or existing files on disk and automatically appends disambiguated suffixes like `(1)`, `(2)`, `(3)`.
@@ -75,6 +75,10 @@ The dry run's approved-mapping snapshot also lives in `logs/pending_mapping.json
 ---
 
 ## 📋 Changelog
+
+### `v1.7.0` (2026-09-09)
+- **WinGet Bootstrap & Self-Healing Runtime Fallbacks (`setup_environment.bat`)**: Added automated handling when Windows Package Manager (`winget`) is missing (e.g. Windows 10 LTSC, Windows Server, stripped enterprise editions). Provides interactive options for direct Astral `uv` installation via official PowerShell bootstrap script (`astral.sh/uv/install.ps1`), automated WinGet + AppX dependencies bootstrap via PowerShell (`Add-AppxPackage`), and direct Python 3.12 installer download from `python.org`. Added `%LOCALAPPDATA%\Microsoft\WindowsApps` to session `PATH` refresh routine.
+- **Tokopedia Platform Order Receipt Support**: Added automated detection and metadata parsing for Tokopedia purchase receipts. Renames files using the standardized template: `YYYYMMDD {Pembeli} {Info Produk}.pdf`. Supports Indonesian and English purchase dates, Unicode ligature normalization (e.g. `\ufb01` $\rightarrow$ `fi`), whitespace collapsing, and Windows filename character sanitization.
 
 ### `v1.6.0` (2026-09-07)
 - **GitHub Repository Auto-Updater (`updater.py`)**: Added automated update checking against `https://github.com/nukie-git/PDFrename` on script start. When a newer commit is available, it downloads/stages the update and prompts the user to either [1] restart immediately with the updated code or [2] continue the current run and finalize the update automatically upon workflow completion.

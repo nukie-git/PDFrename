@@ -9,10 +9,11 @@
 #     "pymupdf",
 # ]
 # ///
-"""dry_run_rename.py (PDFrename v1.6.0)
+"""dry_run_rename.py (PDFrename v1.7.0)
 
 Automated dry run scanner and preview generator for Bank Mandiri (KOPRA) transfer proofs
-(Single Transfer & Multiple Transfer) and image-based scanned bon receipts (IMG_YYYYMMDD_*).
+(Single Transfer & Multiple Transfer), image-based scanned bon receipts (IMG_YYYYMMDD_*),
+and Tokopedia platform order receipts.
 
 Supports execution via standard Python or Astral uv (via PEP 723 inline metadata).
 Scans target directory, extracts metadata via multi-engine PDF parsing (pypdf, FontTools,
@@ -26,6 +27,7 @@ import os
 import re
 import glob
 import json
+import unicodedata
 from datetime import datetime
 from pypdf import PdfReader
 
@@ -63,6 +65,11 @@ MONTH_MAP = {
     'AGT': 8, 'AGO': 8
 }
 
+INDONESIAN_MONTH_MAP = {
+    'januari': 1, 'februari': 2, 'maret': 3, 'april': 4, 'mei': 5, 'juni': 6,
+    'juli': 7, 'agustus': 8, 'september': 9, 'oktober': 10, 'november': 11, 'desember': 12,
+}
+
 # Corrections for common OCR misreads of digits/separators. Applied only to the
 # small local window around a candidate date match, never to the whole OCR text -
 # otherwise a stray '108' or '&' anywhere else on the page (a price, an account
@@ -96,7 +103,8 @@ def normalize_name(name):
 
 def sanitize_component(text):
     """Strip characters/patterns that are illegal or problematic in Windows filenames."""
-    text = re.sub(r'[\\/*?:"<>|]', '', text)
+    text = re.sub(r'[\\/*?:"<>|]', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
     text = text.strip(' .')  # Windows disallows trailing dots/spaces
     if text.upper() in WINDOWS_RESERVED:
         text = f'_{text}'
@@ -266,7 +274,7 @@ DEFAULT_BON_VENDOR = 'Bentang'
 # --- Multi-engine text extraction ----------------------------------------
 
 RECEIPT_CONTENT_PATTERN = re.compile(
-    r'(Single Transfer|Multiple Transfer|Creation Date|Execution Date|Instruction Date|Destination Account|Credit Account|Transfer To|LUNAS)',
+    r'(Single Transfer|Multiple Transfer|Creation Date|Execution Date|Instruction Date|Destination Account|Credit Account|Transfer To|LUNAS|TOKOPEDIA|ORDER RECEIPT|Tanggal Pembelian)',
     re.IGNORECASE
 )
 
@@ -475,7 +483,159 @@ def extract_pdf_text(filepath, reader):
         except Exception as e:
             log(f"pdfplumber fallback error: {e}", "DEBUG")
 
-    return text
+# --- Tokopedia Receipt Parser -------------------------------------------
+
+def is_tokopedia_receipt(text):
+    """Detect whether the document text matches a Tokopedia order/shipping receipt.
+    
+    Identified by the presence of the 'TOKOPEDIA' brand token combined with either
+    'Tanggal Pembelian' (purchase date) or 'ORDER RECEIPT' (invoice header).
+    
+    Args:
+        text (str): Full text extracted from the PDF document across all pages.
+        
+    Returns:
+        bool: True if recognized as a Tokopedia receipt, False otherwise.
+    """
+    return bool(re.search(r'\bTOKOPEDIA\b', text, re.IGNORECASE) and
+                re.search(r'(Tanggal Pembelian|ORDER RECEIPT)', text, re.IGNORECASE))
+
+
+def extract_tokopedia_info(text):
+    """Extract and normalize metadata from a Tokopedia order receipt document.
+    
+    Extracts three primary components following the standardized naming convention:
+        {tanggal pembelian} {pembeli} {info produk}.pdf
+        
+    Component Details:
+    1. Tanggal Pembelian (Purchase Date):
+       - Primary pattern: 'Tanggal Pembelian : DD Month YYYY' (e.g. '03 September 2026')
+       - Supports full Indonesian (Januari..Desember) and English (January..December) month names.
+       - Secondary pattern: Numeric date strings (DD/MM/YYYY or DD-MM-YYYY).
+       - Output normalized to 8-digit 'YYYYMMDD' format (e.g. '20260903') for chronological sorting.
+       
+    2. Pembeli (Buyer Name / Username):
+       - Primary: Header line pattern 'Pembeli : <name>' (e.g. 'nukie').
+       - Fallback: Shipping section 'Penerima' on receipt / shipping label page.
+       - Casing: Preserved verbatim as printed (no forced title casing) to maintain username fidelity.
+       
+    3. Info Produk (Product Details):
+       - Primary: Text under 'INFO PRODUK JUMLAH HARGA SATUAN TOTAL HARGA' preceding 'Berat:',
+         'Catatan:', price items, or payment method headers.
+       - Fallback: 'Deskripsi' block on shipping receipt page.
+       - Unicode Normalization: Uses NFKC normalization to resolve typographic ligatures
+         (such as \ufb01 -> 'fi', resolving 'wiﬁ' -> 'wifi').
+       - Whitespace: Newlines and multiple spaces collapsed to single whitespace.
+       - Windows Sanitization: Forbidden characters ([\\/*?:"<>|]) replaced with space,
+         then collapsed and stripped of edge dots/spaces.
+         
+    Args:
+        text (str): Complete text extracted from the PDF document.
+        
+    Returns:
+        dict: Parsed fields including 'date', 'pembeli', 'info_produk', 'base_stem',
+              and any 'warnings' encountered during extraction.
+    """
+    warnings = []
+
+    # 1. Tanggal Pembelian: Match 'Tanggal Pembelian : 03 September 2026'
+    date_formatted = None
+    date_match = re.search(r'Tanggal Pembelian\s*:\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})', text, re.IGNORECASE)
+    if date_match:
+        day_str, month_str, year_str = date_match.groups()
+        m_lower = month_str.lower()
+        m_num = None
+        # Check Indonesian month mapping first, then English 3-letter abbreviation
+        if m_lower in INDONESIAN_MONTH_MAP:
+            m_num = INDONESIAN_MONTH_MAP[m_lower]
+        else:
+            m_upper = month_str.upper()[:3]
+            if m_upper in MONTH_MAP:
+                m_num = MONTH_MAP[m_upper]
+        if m_num:
+            try:
+                dt = datetime(int(year_str), m_num, int(day_str))
+                date_formatted = dt.strftime('%Y%m%d')
+            except ValueError:
+                pass
+
+    if not date_formatted:
+        # Fallback: Match numeric dates like 'Tanggal Pembelian : 03/09/2026'
+        num_date = re.search(r'Tanggal Pembelian\s*:\s*(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{2,4})', text, re.IGNORECASE)
+        if num_date:
+            d, m, y = int(num_date.group(1)), int(num_date.group(2)), int(num_date.group(3))
+            if y < 100:
+                y += 2000
+            try:
+                date_formatted = datetime(y, m, d).strftime('%Y%m%d')
+            except ValueError:
+                pass
+
+    if not date_formatted:
+        date_formatted = 'UNKNOWN_DATE'
+        warnings.append("Could not parse 'Tanggal Pembelian' - date left as UNKNOWN_DATE")
+
+    # 2. Pembeli: Extract buyer username/name as printed (without deliberate title casing)
+    pembeli = None
+    pembeli_match = re.search(r'Pembeli\s*:\s*([^\r\n]+)', text, re.IGNORECASE)
+    if pembeli_match:
+        pembeli = pembeli_match.group(1).strip()
+    else:
+        # Fallback: Check shipping recipient block on page 2 (Penerima)
+        penerima_match = re.search(r'Penerima\s*[\r\n]+\s*([^\r\n]+)', text, re.IGNORECASE)
+        if penerima_match:
+            pembeli = penerima_match.group(1).strip()
+
+    if not pembeli:
+        pembeli = 'UNKNOWN_PEMBELI'
+        warnings.append("Could not find 'Pembeli' field - pembeli left as UNKNOWN_PEMBELI")
+
+    # 3. Info Produk: Extract product description from order receipt or shipping label
+    info_produk = None
+    # Primary: Match multiline item description from order receipt table
+    prod_match = re.search(
+        r'INFO\s+PRODUK[^\r\n]*\s*[\r\n]+(.*?)(?=\s*(?:Berat:|Catatan:|\d+\s+Rp|Metode Pembayaran))',
+        text, re.DOTALL | re.IGNORECASE
+    )
+    if prod_match:
+        info_produk = prod_match.group(1).strip()
+
+    if not info_produk:
+        # Fallback: Match 'Deskripsi' block on shipping receipt section
+        desk_match = re.search(
+            r'Deskripsi\s*[\r\n]+(.*?)(?=\s*(?:Berat:|Jml:|\d+\s+Rp|RINCIAN))',
+            text, re.DOTALL | re.IGNORECASE
+        )
+        if desk_match:
+            info_produk = desk_match.group(1).strip()
+
+    if info_produk:
+        # Normalize Unicode typographic ligatures (e.g. \ufb01 'fi' in 'wi\ufb01' -> 'wifi')
+        info_produk = unicodedata.normalize('NFKC', info_produk)
+        # Collapse internal newlines and repeated spaces into a single space
+        info_produk = re.sub(r'\s+', ' ', info_produk).strip()
+    else:
+        info_produk = 'Produk'
+        warnings.append("Could not find product info - info produk left as 'Produk'")
+
+    # Sanitize individual components for Windows filesystem safety
+    safe_pembeli = sanitize_component(pembeli)
+    safe_info_produk = sanitize_component(info_produk)
+
+    # Assemble base stem and cap length to stay comfortably under Windows 260-char path limit
+    base_stem = f"{date_formatted} {safe_pembeli} {safe_info_produk}"
+    if len(base_stem) > MAX_STEM_LEN:
+        base_stem = base_stem[:MAX_STEM_LEN].rstrip(' ._')
+
+    return {
+        'date': date_formatted,
+        'pembeli': pembeli,
+        'safe_pembeli': safe_pembeli,
+        'info_produk': info_produk,
+        'safe_info_produk': safe_info_produk,
+        'base_stem': base_stem,
+        'warnings': warnings,
+    }
 
 
 # --- Main mapping --------------------------------------------------------
@@ -564,6 +724,23 @@ def get_rename_mapping(directory='.'):
                 })
                 continue
 
+            # Check for Tokopedia receipts
+            if is_tokopedia_receipt(text):
+                tokopedia_data = extract_tokopedia_info(text)
+                raw_items.append({
+                    'original': filename,
+                    'full_original': f,
+                    'date': tokopedia_data['date'],
+                    'receiver': tokopedia_data['pembeli'],
+                    'remark': tokopedia_data['info_produk'],
+                    'safe_receiver': tokopedia_data['safe_pembeli'],
+                    'safe_remark': tokopedia_data['safe_info_produk'],
+                    'base_stem': tokopedia_data['base_stem'],
+                    'is_tokopedia': True,
+                    'warnings': tokopedia_data['warnings'],
+                })
+                continue
+
             # Skip if the document is not a valid transaction receipt of the expected types
             if not re.search(r'(Single Transfer [Tt]o (Other Bank|Mandiri)|Multiple Transfer [Bb]y (Manual Input|File Upload)|Multiple Transfer)', text, re.IGNORECASE):
                 continue
@@ -642,7 +819,7 @@ def get_rename_mapping(directory='.'):
     mapping = []
 
     for item in raw_items:
-        if item.get('is_img_bon'):
+        if item.get('is_img_bon') or item.get('is_tokopedia'):
             base_stem = item['base_stem']
         else:
             base_stem = f"{item['date']} {item['safe_receiver']} {item['safe_remark']}"

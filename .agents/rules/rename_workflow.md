@@ -15,7 +15,7 @@ If the user triggers this workflow (e.g. by typing `"start"`):
 1. **Do NOT run execute_rename.py first**.
 2. **Execute a Dry Run / Preview**:
    - Run [dry_run_rename.py](dry_run_rename.py) (using `python dry_run_rename.py` or `uv run dry_run_rename.py`) to get the preview mapping.
-   - The script will automatically filter out any PDFs that do not contain `"Single Transfer To Other Bank"` or `"Single Transfer To Mandiri"` (except scanned bons matching `IMG_YYYYMMDD_*.pdf`, which are handled separately via OCR).
+   - The script will automatically detect Bank Mandiri transfer receipts, scanned bon receipts matching `IMG_YYYYMMDD_*.pdf`, and Tokopedia platform order receipts (`TOKOPEDIA`). Any unsupported PDF files are skipped automatically.
    - Output the preview table directly in the chat message window so that the user can visually see the comparison between **Original Filename** and **Proposed New Filename**.
    - If any row is marked `⚠️`, call it out explicitly to the user before asking for approval — it means that field was a fallback guess (OCR unavailable, no date found, unclear vendor), not a confirmed read.
 3. **Wait for Explicit Approval**:

@@ -9,10 +9,11 @@
 #     "pymupdf",
 # ]
 # ///
-"""execute_rename.py (PDFrename v1.6.0)
+"""execute_rename.py (PDFrename v1.7.0)
 
 Safe file renamer executing strictly from the preview-locked snapshot (logs/pending_mapping.json)
 generated during the last dry run. Supports execution via Python or Astral uv.
+Handles Bank Mandiri transfers, scanned bon receipts, and Tokopedia platform order receipts.
 
 Enforces directory verification, maximum snapshot age validation (1 hour), Windows 2-step
 case-only temporary renaming (.tmp_rename), automatic rollback on partial rename failure,

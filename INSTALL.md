@@ -1,6 +1,6 @@
-# Installation & How-To Guide (v1.6.0)
+# Installation & How-To Guide (v1.7.0)
 
-This guide explains how to install and run the PDF Transaction Receipt & Bon Renaming workflow in a clean Windows environment or Google Antigravity workspace.
+This guide explains how to install and run the PDF Transaction Receipt, Bon, & Tokopedia Order Receipt Renaming workflow in a clean Windows environment or Google Antigravity workspace.
 
 ---
 
@@ -45,7 +45,10 @@ The batch file will automatically:
 1. **Detect Runtime**:
    - Checks if `python` is available.
    - If Python is not found, automatically falls back to Astral **`uv`** (`uv run`).
-   - If neither is found, seamlessly launches `setup_environment.bat` which prompts you to install either Astral `uv` or Python 3.12 via `winget`, refreshes your session `PATH`, and resumes workflow execution.
+   - If neither is found, seamlessly launches `setup_environment.bat`. If Windows Package Manager (`winget`) is present, it offers one-click installation for Astral `uv` or Python 3.12. If `winget` is missing (such as on Windows 10 LTSC, Windows Server, or stripped enterprise editions), it provides immediate self-healing options:
+     - **Direct Astral `uv` Installation (Recommended)**: Zero-dependency PowerShell web installer (`astral.sh/uv/install.ps1`) that works without admin rights or Microsoft Store.
+     - **Automated WinGet Bootstrap**: Downloads and registers Microsoft App Installer, `Microsoft.VCLibs`, and `Microsoft.UI.Xaml` dependencies via PowerShell.
+     - **Direct Python 3.12 Installer**: Automated download and passive installation directly from `python.org`.
 2. **Resolve Dependencies**:
    - If using `python`: checks for `pypdf`, `pillow`, `fonttools`, `rapidocr-onnxruntime`, `pdfplumber`, and `pymupdf`. Packages $< 5\text{ MB}$ (`pypdf`, `pillow`, `fonttools`) are downloaded together, while packages $\ge 5\text{ MB}$ (`pdfplumber`, `rapidocr-onnxruntime`, `pymupdf`) are installed singularly in sequence to avoid network/RAM saturation.
    - If using `uv`: dependencies are automatically managed via PEP 723 inline script metadata (`# /// script`) in an isolated cache.
