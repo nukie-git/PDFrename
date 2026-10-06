@@ -158,4 +158,10 @@ def rename_files(directory='.'):
 if __name__ == '__main__':
     import sys
     target_dir = sys.argv[1] if len(sys.argv) > 1 else '.'
+    if target_dir:
+        target_dir = target_dir.strip().rstrip('"')
+        while len(target_dir) > 1 and target_dir.endswith('\\') and not target_dir.endswith(':\\'):
+            target_dir = target_dir[:-1]
+        if not target_dir:
+            target_dir = '.'
     rename_files(target_dir)

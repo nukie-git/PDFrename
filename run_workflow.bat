@@ -12,6 +12,16 @@ if "%~1"=="" (
     set "TARGET_DIR=%~1"
 )
 
+REM Strip trailing backslashes if present (unless drive root like C:\)
+REM Prevents Windows C-runtime argument parser from interpreting \" as an escaped quote
+:normalize_target_dir
+if defined TARGET_DIR (
+    if "!TARGET_DIR:~-1!"=="\" if not "!TARGET_DIR:~-2!"==":\" (
+        set "TARGET_DIR=!TARGET_DIR:~0,-1!"
+        goto normalize_target_dir
+    )
+)
+
 echo ===================================================
 echo   PDF Transaction Receipt Renaming Workflow Tool
 echo   © nukie 2026

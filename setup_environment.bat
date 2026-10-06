@@ -279,6 +279,7 @@ if /i "!dep_choice!"=="Y" (
     goto setup_complete
 ) else (
     echo [WARNING] Missing required dependencies.
+    pause
     exit /b 1
 )
 
@@ -298,7 +299,30 @@ if !errorlevel! equ 0 (
     echo   - Rename Downloads Receipts ^(PDFrename^)
     echo   - PDFrename Workflow ^(Custom or Drag-Drop Folder^)
 ) else (
-    echo [WARNING] Could not create Desktop shortcuts automatically.
+    REM Fallback to PowerShell if VBScript is disabled or deprecated (e.g. Windows 11 24H2+)
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$ws = New-Object -ComObject WScript.Shell; " ^
+        "$desktop = $ws.SpecialFolders('Desktop'); " ^
+        "$dir = '%~dp0'.TrimEnd('\'); " ^
+        "$s1 = $ws.CreateShortcut((Join-Path $desktop 'Rename Downloads Receipts (PDFrename).lnk')); " ^
+        "$s1.TargetPath = (Join-Path $dir 'rename_workflow.bat'); " ^
+        "$s1.WorkingDirectory = $dir; " ^
+        "$s1.Description = 'Automated Bank Mandiri receipt & bon scanner for %%USERPROFILE%%\Downloads'; " ^
+        "$s1.IconLocation = 'shell32.dll, 269'; " ^
+        "$s1.Save(); " ^
+        "$s2 = $ws.CreateShortcut((Join-Path $desktop 'PDFrename Workflow (Custom or Drag-Drop Folder).lnk')); " ^
+        "$s2.TargetPath = (Join-Path $dir 'run_workflow.bat'); " ^
+        "$s2.WorkingDirectory = $dir; " ^
+        "$s2.Description = 'Automated Bank Mandiri receipt & bon scanner (specify or drag-and-drop folder)'; " ^
+        "$s2.IconLocation = 'shell32.dll, 43'; " ^
+        "$s2.Save();" >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo [SUCCESS] Desktop shortcuts created via PowerShell:
+        echo   - Rename Downloads Receipts ^(PDFrename^)
+        echo   - PDFrename Workflow ^(Custom or Drag-Drop Folder^)
+    ) else (
+        echo [WARNING] Could not create Desktop shortcuts automatically.
+    )
 )
 
 echo(

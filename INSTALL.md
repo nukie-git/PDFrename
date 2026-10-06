@@ -29,10 +29,10 @@ Ensure the files are placed as follows:
 ---
 
 ## 2. Desktop Shortcut Setup
-Desktop shortcuts are **automatically created** when running `setup_environment.bat` (or upon completing initial runtime setup).
+Desktop shortcuts are **automatically created** when running `setup_environment.bat` (or upon completing initial runtime setup). Fully compatible with both **Windows 10** and **Windows 11** (includes automatic PowerShell fallback for Windows 11 24H2+ where VBScript is deprecated).
 You can also re-create them manually at any time by double-clicking **`create-shortcut.vbs`**:
 - **`Rename Downloads Receipts (PDFrename)`**: 1-click execution for files in `%USERPROFILE%\Downloads`.
-- **`PDFrename Workflow (Custom or Drag-Drop Folder)`**: Drag and drop any folder directly onto this shortcut to process and rename receipts inside that folder!
+- **`PDFrename Workflow (Custom or Drag-Drop Folder)`**: Drag and drop any folder directly onto this shortcut to process and rename receipts inside that folder! (Automatically normalizes trailing slashes and escaped quotes from Explorer).
 
 ---
 
