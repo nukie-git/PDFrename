@@ -64,7 +64,7 @@ def load_pending_mapping(directory):
 
 
 def rename_files(directory='.'):
-    directory = os.path.expandvars(os.path.expanduser(directory))
+    directory = os.path.expandvars(os.path.expanduser(directory.strip() if directory and directory.strip() else '.'))
     log(f"Starting execute rename on directory: {directory}", "INFO")
 
     mapping, err = load_pending_mapping(directory)

@@ -641,7 +641,7 @@ def extract_tokopedia_info(text):
 # --- Main mapping --------------------------------------------------------
 
 def get_rename_mapping(directory='.'):
-    directory = os.path.expandvars(os.path.expanduser(directory))
+    directory = os.path.expandvars(os.path.expanduser(directory.strip() if directory and directory.strip() else '.'))
     log(f"Starting dry run scan on directory: {directory}", "INFO")
 
     pdf_files = glob.glob(os.path.join(directory, '*.pdf'))

@@ -133,8 +133,11 @@ def stage_update_files(remote_sha):
             req = urllib.request.Request(url, headers={"User-Agent": "PDFrename-AutoUpdater"})
             try:
                 with urllib.request.urlopen(req, timeout=5) as resp:
+                    content = resp.read()
+                    if filename.endswith(".bat"):
+                        content = content.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
                     with open(dest_path, "wb") as out_f:
-                        out_f.write(resp.read())
+                        out_f.write(content)
             except Exception as fe:
                 log(f"Could not download '{filename}' during staging: {fe}", "DEBUG")
 
@@ -270,7 +273,13 @@ def apply_staged_update(update_info=None):
                 for file in files:
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(target_root, file)
-                    shutil.copy2(src_file, dst_file)
+                    if file.endswith(".bat"):
+                        with open(src_file, "rb") as bf:
+                            bcontent = bf.read().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                        with open(dst_file, "wb") as bf:
+                            bf.write(bcontent)
+                    else:
+                        shutil.copy2(src_file, dst_file)
 
             shutil.rmtree(UPDATE_STAGING_DIR, ignore_errors=True)
             if remote_sha:
