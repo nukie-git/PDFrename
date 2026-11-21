@@ -30,6 +30,9 @@ echo ===================================================
 echo(
 
 :detect_runtime
+if exist "%USERPROFILE%\.local\bin\uv.exe" (
+    echo !PATH! | find /i "%USERPROFILE%\.local\bin" >nul || set "PATH=%USERPROFILE%\.local\bin;!PATH!"
+)
 REM 1. Check if Python is available
 python --version >nul 2>&1
 if !errorlevel! equ 0 (
